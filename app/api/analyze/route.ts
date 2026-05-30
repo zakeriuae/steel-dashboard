@@ -35,8 +35,12 @@ export async function POST(req: Request) {
           const set = new Set(body.rowNumbers)
           targets = targets.filter((r) => set.has(r.rowNumber))
         } else {
-          // Only rows where AI Analysis Status is empty.
-          targets = targets.filter((r) => (r.values[STATUS] ?? "").trim() === "")
+          // Only rows where AI Analysis Status is empty and raw content length is at least 70 characters.
+          targets = targets.filter(
+            (r) =>
+              (r.values[STATUS] ?? "").trim() === "" &&
+              (r.values[RAW_CONTENT] ?? "").trim().length >= 70,
+          )
         }
 
         send({ type: "start", total: targets.length })

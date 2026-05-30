@@ -50,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl" className={`dark bg-background ${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
-      <body className="font-sans antialiased">
+      <body className={`font-sans antialiased ${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

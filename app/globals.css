@@ -119,8 +119,10 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
+  html, body {
     @apply bg-background text-foreground;
     font-family: var(--font-vazirmatn), var(--font-geist-sans), system-ui, sans-serif;
+    direction: rtl;
+    text-align: right;
   }
 }
