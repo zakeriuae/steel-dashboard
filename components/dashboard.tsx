@@ -209,7 +209,7 @@ export function Dashboard() {
   const retryRow = useCallback((row: SheetRow) => runAnalysis([row.rowNumber]), [runAnalysis])
 
   return (
-    <div className="flex min-h-screen flex-col bg-background" dir="rtl">
+    <div className="flex min-h-screen flex-col bg-background" dir="rtl" style={{ direction: 'rtl', textAlign: 'right' }}>
       <Header
         running={running}
         pendingCount={pendingCount}
@@ -228,9 +228,9 @@ export function Dashboard() {
         {error ? (
           <ConnectionError message={error.message} onRetry={() => mutate()} />
         ) : (
-          <Tabs defaultValue="table" className="flex flex-1 flex-col">
-            <div className="border-b border-border bg-card/40 px-4 sm:px-6">
-              <TabsList className="h-12 bg-transparent p-0">
+          <Tabs defaultValue="table" dir="rtl" className="flex flex-1 flex-col">
+            <div className="border-b border-border bg-card/40 px-4 sm:px-6" dir="rtl" style={{ direction: 'rtl' }}>
+              <TabsList className="h-12 bg-transparent p-0" dir="rtl" style={{ direction: 'rtl' }}>
                 <TabsTrigger
                   value="table"
                   className="gap-2 rounded-none border-b-2 border-transparent bg-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
@@ -385,8 +385,8 @@ function Header(props: {
   const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-card/80 backdrop-blur-xl">
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+    <header className="sticky top-0 z-20 border-b border-border bg-card/80 backdrop-blur-xl" dir="rtl" style={{ direction: 'rtl' }}>
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6" dir="rtl" style={{ direction: 'rtl' }}>
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Sparkles className="size-5" />

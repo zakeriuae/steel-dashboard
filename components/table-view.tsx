@@ -167,9 +167,9 @@ export function TableView({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" dir="rtl" style={{ direction: 'rtl', textAlign: 'right' }}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card/40 px-4 py-3 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card/40 px-4 py-3 sm:px-6" dir="rtl" style={{ direction: 'rtl' }}>
         <div className="relative min-w-50 flex-1">
           <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -219,13 +219,13 @@ export function TableView({
       </div>
 
       {/* Table */}
-      <div className="relative flex-1 overflow-auto">
+      <div className="relative flex-1 overflow-auto" dir="rtl" style={{ direction: 'rtl' }}>
         {isLoading ? (
           <LoadingState />
         ) : filtered.length === 0 ? (
           <EmptyState hasRows={rows.length > 0} />
         ) : (
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full border-collapse text-sm" dir="rtl" style={{ direction: 'rtl' }}>
             <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
               <tr className="border-b border-border text-right text-xs uppercase tracking-wide text-muted-foreground">
                 <SortableTh label="موضوع و متن یادداشت" k="Topic" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
