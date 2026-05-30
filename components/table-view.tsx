@@ -80,7 +80,7 @@ function translateCategory(category: string): string {
   return CATEGORY_TRANSLATIONS[cat] || cat || "—"
 }
 
-type SortKey = "Title" | "Category" | "Priority" | "Insight Type" | "Confidence Score" | "AI Analysis Status"
+type SortKey = "Title" | "Category" | "Priority" | "Insight Type" | "Confidence Score" | "AI Analysis Status" | "Topic"
 type SortDir = "asc" | "desc"
 
 const PRIORITY_ORDER: Record<string, number> = { Low: 0, Medium: 1, High: 2, Critical: 3 }
@@ -228,14 +228,11 @@ export function TableView({
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
               <tr className="border-b border-border text-right text-xs uppercase tracking-wide text-muted-foreground">
-                <SortableTh label="وضعیت" k="AI Analysis Status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="عنوان / متن خام" k="Title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="دسته‌بندی" k="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 font-medium text-right">موضوع</th>
-                <SortableTh label="نوع تحلیل" k="Insight Type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="اولویت" k="Priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="درصد اطمینان" k="Confidence Score" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 font-medium" />
+                <SortableTh label="موضوع و متن یادداشت" k="Topic" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 font-medium text-right">فرستنده و تاریخ</th>
+                <SortableTh label="دسته‌بندی و نوع یافته" k="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="اولویت و درصد اطمینان" k="Priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="وضعیت و عملیات" k="AI Analysis Status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody>
@@ -249,91 +246,115 @@ export function TableView({
                     key={row.rowNumber}
                     onClick={() => setSelected(row)}
                     className={cn(
-                      "cursor-pointer border-b border-border/60 transition-colors hover:bg-accent/40 text-right",
+                      "cursor-pointer border-b border-border/60 transition-colors hover:bg-accent/40 text-right align-middle",
                       isActive && "bg-primary/5",
                     )}
                   >
-                    <td className="px-4 py-3 text-right">
-                      <StatusBadge status={status} processing={isActive && status === "Processing"} />
-                    </td>
-                    <td className="max-w-64 px-4 py-3 text-right" dir="auto">
+                    {/* Column 1: Topic and Raw Content */}
+                    <td className="max-w-md px-4 py-3 text-right">
                       <div className="flex flex-col gap-1">
-                        <span className="line-clamp-2 font-medium text-foreground">
-                          {row.values["Title"] || (
-                            <span className="text-muted-foreground">
-                              {truncate(row.values[RAW_CONTENT], 60)}
-                            </span>
-                          )}
+                        <span className="font-semibold text-primary text-sm line-clamp-1 leading-snug">
+                          {row.values["Topic"] || "بدون موضوع"}
                         </span>
-                        {(sender || date) && (
-                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/85 font-sans mt-0.5" dir="auto">
-                            {sender && (
-                              <span className="flex items-center gap-1 bg-secondary px-1.5 py-0.5 rounded text-[9px] font-semibold text-secondary-foreground border border-border/40">
-                                {sender}
-                              </span>
-                            )}
-                            {date && (
-                              <span className="font-mono text-[9px] opacity-75">
-                                {date}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <span className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">
+                          {row.values["Title"] || truncate(row.values[RAW_CONTENT], 75)}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right" dir="auto">
-                      {row.values["Category"] ? (
-                        <span className="text-foreground">{translateCategory(row.values["Category"])}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="max-w-40 px-4 py-3 text-muted-foreground text-right" dir="auto">
-                      <span className="line-clamp-1">{row.values["Topic"] || "—"}</span>
-                    </td>
+
+                    {/* Column 2: Sender and Date */}
                     <td className="px-4 py-3 text-right">
-                      {row.values["Insight Type"] ? (
-                        <Badge
-                          variant="outline"
-                          className={cn("font-normal", INSIGHT_STYLES[row.values["Insight Type"]])}
-                        >
-                          {INSIGHT_TRANSLATIONS[row.values["Insight Type"]] || row.values["Insight Type"]}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      <div className="flex flex-col gap-1.5 justify-center">
+                        <div>
+                          {sender ? (
+                            <span className="bg-secondary/40 px-2 py-0.5 rounded text-[10px] font-semibold text-secondary-foreground border border-border/40 inline-block">
+                              {sender}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                        <div>
+                          {date ? (
+                            <span className="font-mono text-[10px] text-muted-foreground/75">
+                              {date}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
+
+                    {/* Column 3: Category and Insight Type */}
                     <td className="px-4 py-3 text-right">
-                      {row.values["Priority"] ? (
-                        <Badge
-                          variant="outline"
-                          className={cn("font-normal", PRIORITY_STYLES[row.values["Priority"]])}
-                        >
-                          {PRIORITY_TRANSLATIONS[row.values["Priority"]] || row.values["Priority"]}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-medium text-foreground text-xs line-clamp-1">
+                          {row.values["Category"] ? translateCategory(row.values["Category"]) : "—"}
+                        </span>
+                        <div>
+                          {row.values["Insight Type"] ? (
+                            <Badge
+                              variant="outline"
+                              className={cn("font-normal text-[9px] px-1.5 py-0.5 leading-none", INSIGHT_STYLES[row.values["Insight Type"]])}
+                            >
+                              {INSIGHT_TRANSLATIONS[row.values["Insight Type"]] || row.values["Insight Type"]}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
+
+                    {/* Column 4: Priority and Confidence Score */}
                     <td className="px-4 py-3 text-right">
-                      {conf > 0 ? <ConfidenceBar value={conf} /> : <span className="text-muted-foreground">—</span>}
+                      <div className="flex flex-col gap-1.5">
+                        <div>
+                          {row.values["Priority"] ? (
+                            <Badge
+                              variant="outline"
+                              className={cn("font-normal text-[9px] px-1.5 py-0.5 leading-none", PRIORITY_STYLES[row.values["Priority"]])}
+                            >
+                              {PRIORITY_TRANSLATIONS[row.values["Priority"]] || row.values["Priority"]}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-start">
+                          {conf > 0 ? <ConfidenceBar value={conf} /> : <span className="text-muted-foreground text-xs">—</span>}
+                        </div>
+                      </div>
                     </td>
+
+                    {/* Column 5: Status and Action Buttons */}
                     <td className="px-4 py-3 text-left">
-                      {status === "Error" && (
+                      <div className="flex items-center gap-2 justify-start md:justify-end flex-wrap" onClick={(e) => e.stopPropagation()}>
+                        <StatusBadge status={status} processing={isActive && status === "Processing"} />
+                        
+                        {status === "Error" && (
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            disabled={running}
+                            onClick={() => onRetry(row)}
+                            className="gap-1 text-[10px] h-7 px-2 border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10"
+                          >
+                            <RotateCw className="size-3" />
+                            تلاش مجدد
+                          </Button>
+                        )}
+
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={running}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onRetry(row)
-                          }}
-                          className="gap-1.5 text-muted-foreground"
+                          className="text-[10px] font-semibold text-primary hover:text-primary-foreground hover:bg-primary/20 gap-1 h-7 px-2.5 rounded-lg transition-all"
+                          onClick={() => setSelected(row)}
                         >
-                          <RotateCw className="size-3.5" />
-                          تلاش مجدد
+                          بررسی
                         </Button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 )
