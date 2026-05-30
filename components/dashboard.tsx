@@ -11,6 +11,7 @@ import { RAW_CONTENT, STATUS, type AnalyzeEvent, type SheetData, type SheetRow }
 import { TableView } from "@/components/table-view"
 import { MindMapView } from "@/components/mind-map-view"
 import { ErrorLogModal, type LogEntry } from "@/components/error-log-modal"
+import { Switch } from "@/components/ui/switch"
 
 const fetcher = async (url: string): Promise<SheetData> => {
   const res = await fetch(url)
@@ -33,7 +34,14 @@ export function Dashboard() {
   const [logOpen, setLogOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
-  const rows = data?.rows ?? []
+  const [filterShort, setFilterShort] = useState(true)
+  const allRows = data?.rows ?? []
+
+  const rows = useMemo(() => {
+    if (!filterShort) return allRows
+    return allRows.filter((r) => (r.values[RAW_CONTENT] ?? "").trim().length >= 70)
+  }, [allRows, filterShort])
+
   const headers = data?.headers ?? []
 
   const pendingCount = useMemo(
@@ -184,6 +192,8 @@ export function Dashboard() {
         onRefresh={() => mutate()}
         onOpenLogs={() => setLogOpen(true)}
         logCount={logs.length}
+        filterShort={filterShort}
+        onFilterShortChange={setFilterShort}
       />
 
       <main className="flex flex-1 flex-col">
@@ -246,8 +256,10 @@ function Header(props: {
   onRefresh: () => void
   onOpenLogs: () => void
   logCount: number
+  filterShort: boolean
+  onFilterShortChange: (val: boolean) => void
 }) {
-  const { running, pendingCount, completedCount, errorCount, progress, onRun, onRefresh, onOpenLogs, logCount } = props
+  const { running, pendingCount, completedCount, errorCount, progress, onRun, onRefresh, onOpenLogs, logCount, filterShort, onFilterShortChange } = props
   const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0
 
   return (
@@ -278,6 +290,21 @@ function Header(props: {
               </span>
             </div>
           )}
+
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-1.5 h-9 text-xs transition-all hover:bg-background/80 hover:border-border">
+            <Switch
+              id="short-filter"
+              checked={filterShort}
+              onCheckedChange={onFilterShortChange}
+            />
+            <label
+              htmlFor="short-filter"
+              className="cursor-pointer font-medium text-muted-foreground select-none leading-none hover:text-foreground transition-colors"
+            >
+              فیلتر پیام‌های کوتاه (&lt; 70)
+            </label>
+          </div>
+
           <Button variant="ghost" size="icon" onClick={onRefresh} disabled={running} title="Refresh data">
             <RefreshCw className="size-4" />
             <span className="sr-only">Refresh</span>
