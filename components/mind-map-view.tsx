@@ -857,7 +857,40 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
                         <span className="text-[10px] text-muted-foreground/60 font-sans">سطر {row.rowNumber}</span>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6 text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 rounded-md shrink-0 transition-all"
+                          onClick={() => {
+                            const BOM = "\uFEFF"
+                            const csvHeaders = ["شماره سطر", "موضوع", "دسته‌بندی اصلی", "نوع یافته", "خلاصه یافته", "اولویت", "درصد اطمینان", "فرستنده", "تاریخ ثبت", "متن خام یادداشت"]
+                            const rowData = [
+                              row.rowNumber,
+                              `"${(row.values["Topic"] || "بدون موضوع").replace(/"/g, '""')}"`,
+                              `"${translateCategory(row.values["Category"]).replace(/"/g, '""')}"`,
+                              `"${(row.values["Insight Type"] || "—").replace(/"/g, '""')}"`,
+                              `"${(row.values["Summary"] || "—").replace(/"/g, '""')}"`,
+                              `"${(row.values["Priority"] || "—").replace(/"/g, '""')}"`,
+                              `"${row.values["Confidence Score"] ? `${row.values["Confidence Score"]}%` : "—"}"`,
+                              `"${(sender || "—").replace(/"/g, '""')}"`,
+                              `"${(date || "—").replace(/"/g, '""')}"`,
+                              `"${(row.values[RAW_CONTENT] || "").replace(/"/g, '""')}"`
+                            ]
+                            const csvContent = BOM + [csvHeaders.join(","), rowData.join(",")].join("\n")
+                            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+                            const url = URL.createObjectURL(blob)
+                            const link = document.createElement("a")
+                            link.setAttribute("href", url)
+                            link.setAttribute("download", `تحلیل_یادداشت_سطر_${row.rowNumber}.csv`)
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                          }}
+                          title="دانلود تحلیل این یادداشت"
+                        >
+                          <Download className="size-3.5" />
+                        </Button>
                         {priority && (
                           <Badge
                             variant="outline"
@@ -872,9 +905,11 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
 
                     {/* Topic/Title & snippet */}
                     <div className="flex flex-col gap-1">
-                      <h4 className="font-semibold text-primary text-sm line-clamp-1 leading-snug group-hover:text-primary/80 transition-colors">
-                        {row.values["Topic"] || "بدون موضوع"}
-                      </h4>
+                      {row.values["Topic"] && (
+                        <h4 className="font-semibold text-primary text-sm line-clamp-1 leading-snug group-hover:text-primary/80 transition-colors">
+                          {row.values["Topic"]}
+                        </h4>
+                      )}
                       {row.values["Summary"] && (
                         <p className="text-xs font-medium text-foreground/80 line-clamp-2 leading-relaxed mt-0.5">
                           {row.values["Summary"]}

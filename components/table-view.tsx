@@ -9,6 +9,7 @@ import {
   RotateCw,
   Loader2,
   Inbox,
+  Download,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -166,6 +167,52 @@ export function TableView({
     }
   }
 
+  const handleDownloadTableCSV = () => {
+    if (filtered.length === 0) return
+
+    const BOM = "\uFEFF"
+    const csvHeaders = [
+      "شماره سطر",
+      "موضوع",
+      "دسته‌بندی اصلی",
+      "نوع یافته",
+      "خلاصه یافته",
+      "اولویت",
+      "درصد اطمینان",
+      "فرستنده",
+      "تاریخ ثبت",
+      "متن خام یادداشت"
+    ]
+
+    const csvLines = [csvHeaders.join(",")]
+
+    for (const r of filtered) {
+      const { sender, date } = getRowMetadata(r.values)
+      const rowData = [
+        r.rowNumber,
+        `"${(r.values["Topic"] || "بدون موضوع").replace(/"/g, '""')}"`,
+        `"${translateCategory(r.values["Category"]).replace(/"/g, '""')}"`,
+        `"${(r.values["Insight Type"] || "—").replace(/"/g, '""')}"`,
+        `"${(r.values["Summary"] || "—").replace(/"/g, '""')}"`,
+        `"${(r.values["Priority"] || "—").replace(/"/g, '""')}"`,
+        `"${r.values["Confidence Score"] ? `${r.values["Confidence Score"]}%` : "—"}"`,
+        `"${(sender || "—").replace(/"/g, '""')}"`,
+        `"${(date || "—").replace(/"/g, '""')}"`,
+        `"${(r.values[RAW_CONTENT] || "").replace(/"/g, '""')}"`
+      ]
+      csvLines.push(rowData.join(","))
+    }
+
+    const blob = new Blob([BOM + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `گزارش_جدول_یادداشت‌ها.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="flex h-full flex-col" dir="rtl" style={{ direction: 'rtl', textAlign: 'right' }}>
       {/* Toolbar */}
@@ -179,6 +226,13 @@ export function TableView({
             className="pr-9 pl-3"
           />
         </div>
+        <Button
+          onClick={handleDownloadTableCSV}
+          className="gap-1.5 text-xs font-semibold px-4 h-9 rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 transition-all flex items-center font-sans"
+        >
+          <Download className="size-4" />
+          دانلود اکسل جدول
+        </Button>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="وضعیت" />
@@ -229,10 +283,10 @@ export function TableView({
             <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
               <tr className="border-b border-border text-right text-xs uppercase tracking-wide text-muted-foreground">
                 <SortableTh label="موضوع و متن یادداشت" k="Topic" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 font-medium text-right">فرستنده و تاریخ</th>
-                <SortableTh label="دسته‌بندی و نوع یافته" k="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="اولویت و درصد اطمینان" k="Priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="وضعیت و عملیات" k="AI Analysis Status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="w-48 px-4 py-3 font-medium text-right shrink-0">فرستنده و تاریخ</th>
+                <SortableTh label="دسته‌بندی و نوع یافته" k="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-60 shrink-0 text-right font-medium" />
+                <SortableTh label="اولویت و درصد اطمینان" k="Priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-44 shrink-0 text-right font-medium" />
+                <SortableTh label="وضعیت و عملیات" k="AI Analysis Status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-48 shrink-0 text-left font-medium" />
               </tr>
             </thead>
             <tbody>
@@ -251,11 +305,13 @@ export function TableView({
                     )}
                   >
                     {/* Column 1: Topic and Raw Content */}
-                    <td className="max-w-md px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex flex-col gap-1">
-                        <span className="font-semibold text-primary text-sm line-clamp-1 leading-snug">
-                          {row.values["Topic"] || "بدون موضوع"}
-                        </span>
+                        {row.values["Topic"] && (
+                          <span className="font-semibold text-primary text-sm line-clamp-1 leading-snug">
+                            {row.values["Topic"]}
+                          </span>
+                        )}
                         <span className="text-muted-foreground text-xs line-clamp-2 leading-relaxed">
                           {row.values["Title"] || truncate(row.values[RAW_CONTENT], 75)}
                         </span>
@@ -379,16 +435,18 @@ function SortableTh({
   sortKey,
   sortDir,
   onSort,
+  className,
 }: {
   label: string
   k: SortKey
   sortKey: SortKey
   sortDir: SortDir
   onSort: (k: SortKey) => void
+  className?: string
 }) {
   const active = sortKey === k
   return (
-    <th className="px-4 py-3 font-medium">
+    <th className={cn("px-4 py-3 font-medium", className)}>
       <button
         onClick={() => onSort(k)}
         className={cn(

@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator"
 import { cn, getRowMetadata } from "@/lib/utils"
 import { AI_FIELDS, RAW_CONTENT, STATUS, ERROR_DETAILS, type SheetRow } from "@/lib/types"
 import { PRIORITY_STYLES, STATUS_STYLES, INSIGHT_STYLES } from "@/lib/field-meta"
+import { Button } from "@/components/ui/button"
+import { Download } from "lucide-react"
 
 const FIELD_TRANSLATIONS: Record<string, string> = {
   "Category": "دسته‌بندی اصلی",
@@ -94,6 +96,44 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
   const status = (v[STATUS] ?? "").trim()
   const { sender, date } = getRowMetadata(v)
 
+  const handleDownloadCSV = () => {
+    const BOM = "\uFEFF"
+    const csvHeaders = [
+      "شماره سطر",
+      "موضوع",
+      "دسته‌بندی اصلی",
+      "نوع یافته",
+      "خلاصه یافته",
+      "اولویت",
+      "درصد اطمینان",
+      "فرستنده",
+      "تاریخ ثبت",
+      "متن خام یادداشت"
+    ]
+    const rowData = [
+      row.rowNumber,
+      `"${(v["Topic"] || "بدون موضوع").replace(/"/g, '""')}"`,
+      `"${(CATEGORY_TRANSLATIONS[v["Category"]] || v["Category"] || "—").replace(/"/g, '""')}"`,
+      `"${(v["Insight Type"] || "—").replace(/"/g, '""')}"`,
+      `"${(v["Summary"] || "—").replace(/"/g, '""')}"`,
+      `"${(v["Priority"] || "—").replace(/"/g, '""')}"`,
+      `"${v["Confidence Score"] ? `${v["Confidence Score"]}%` : "—"}"`,
+      `"${(sender || "—").replace(/"/g, '""')}"`,
+      `"${(date || "—").replace(/"/g, '""')}"`,
+      `"${(v[RAW_CONTENT] || "").replace(/"/g, '""')}"`
+    ]
+    const csvContent = BOM + [csvHeaders.join(","), rowData.join(",")].join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    const safeTitle = (v["Topic"] || v["Title"] || "یادداشت").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_")
+    link.setAttribute("download", `تحلیل_یادداشت_${safeTitle}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <Dialog open={!!row} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl gap-0 p-0 text-right">
@@ -112,7 +152,18 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
                 {PRIORITY_TRANSLATIONS[v["Priority"]] || v["Priority"]}
               </Badge>
             )}
-            <span className="mr-auto ml-0 text-xs text-muted-foreground">سطر {row.rowNumber}</span>
+            <div className="mr-auto ml-0 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={handleDownloadCSV}
+                className="gap-1 text-[10px] h-7 px-2 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500 rounded-lg shrink-0 transition-all font-sans"
+              >
+                <Download className="size-3" />
+                دانلود CSV
+              </Button>
+              <span className="text-xs text-muted-foreground">سطر {row.rowNumber}</span>
+            </div>
           </div>
           <DialogTitle className="text-pretty text-lg leading-snug text-right font-sans mt-3" dir="auto">
             {v["Title"] || "یادداشت بدون عنوان"}
