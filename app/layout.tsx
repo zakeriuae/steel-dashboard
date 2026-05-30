@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
 })
 
+// Configure Vazirmatn as the primary Persian font fallback for standard Geist typography
 const vazirmatn = Vazirmatn({
   subsets: ["arabic", "latin"],
   variable: "--font-vazirmatn",
@@ -20,7 +21,7 @@ const vazirmatn = Vazirmatn({
 })
 
 export const metadata: Metadata = {
-  title: 'Insight Board — AI Sheet Analysis',
+  title: 'Insight Board — AI Sheet Analysis (Farsi Support)',
   description: 'Turn raw Google Sheets notes into structured business intelligence with AI analysis, a sortable table, and a physics-based knowledge graph.',
   generator: 'v0.app',
   icons: {
