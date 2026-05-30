@@ -3,17 +3,70 @@ import { REQUIRED_COLUMNS, type SheetData, type SheetRow } from "./types"
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID
 
-function getAuth() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  // Support keys stored with literal "\n" sequences (common in env vars).
-  const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n")
+function normalizeNewlines(value: string): string {
+  return value
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .trim()
+}
+
+// Resolve { email, key } from env, tolerating several common ways people
+// store Google service-account credentials:
+//  - GOOGLE_PRIVATE_KEY = raw PEM key  (+ GOOGLE_SERVICE_ACCOUNT_EMAIL)
+//  - GOOGLE_PRIVATE_KEY = full service-account JSON blob (single var)
+function resolveCredentials(): { email: string; key: string } {
+  let rawKey = process.env.GOOGLE_PRIVATE_KEY?.trim()
+  let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim()
+
+  // Case: the entire service-account JSON was pasted into GOOGLE_PRIVATE_KEY
+  // (or into a dedicated GOOGLE_CREDENTIALS_JSON var).
+  const jsonBlob = process.env.GOOGLE_CREDENTIALS_JSON?.trim() ||
+    (rawKey && rawKey.startsWith("{") ? rawKey : undefined)
+
+  if (jsonBlob) {
+    try {
+      const parsed = JSON.parse(jsonBlob) as {
+        private_key?: string
+        client_email?: string
+      }
+      if (parsed.private_key) rawKey = parsed.private_key
+      if (!email && parsed.client_email) email = parsed.client_email
+    } catch {
+      throw new Error(
+        "GOOGLE_PRIVATE_KEY looks like JSON but could not be parsed. Paste the full service-account JSON exactly, or paste only the private_key value.",
+      )
+    }
+  }
+
+  // Strip wrapping quotes if pasted including JSON quotes.
+  if (
+    rawKey &&
+    ((rawKey.startsWith('"') && rawKey.endsWith('"')) ||
+      (rawKey.startsWith("'") && rawKey.endsWith("'")))
+  ) {
+    rawKey = rawKey.slice(1, -1)
+  }
+
+  const key = rawKey ? normalizeNewlines(rawKey) : undefined
 
   if (!email || !key) {
     throw new Error(
-      "Missing Google credentials. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY.",
+      "Missing Google credentials. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY (or paste the full service-account JSON into GOOGLE_PRIVATE_KEY).",
     )
   }
 
+  if (!key.includes("BEGIN PRIVATE KEY")) {
+    throw new Error(
+      "Could not find a valid PEM private key. Check the GOOGLE_PRIVATE_KEY value.",
+    )
+  }
+
+  return { email, key }
+}
+
+function getAuth() {
+  const { email, key } = resolveCredentials()
   return new google.auth.JWT({
     email,
     key,
