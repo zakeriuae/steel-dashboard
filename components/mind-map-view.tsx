@@ -12,14 +12,32 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force"
-import { ZoomIn, ZoomOut, Maximize, Move, Network } from "lucide-react"
+import { ZoomIn, ZoomOut, Maximize, Move, Network, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { RAW_CONTENT, STATUS, VALID_CATEGORIES, type SheetRow } from "@/lib/types"
-import { categoryColor } from "@/lib/field-meta"
+import { categoryColor, PRIORITY_STYLES } from "@/lib/field-meta"
 import { RowDetailDialog } from "@/components/row-detail-dialog"
 import { cn, getRowMetadata } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+const PRIORITY_TRANSLATIONS: Record<string, string> = {
+  Low: "کم",
+  Medium: "متوسط",
+  High: "زیاد",
+  Critical: "بحرانی",
+}
+
+function ConfidenceBar({ value }: { value: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="h-1.5 w-10 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+      </div>
+      <span className="text-[10px] tabular-nums text-muted-foreground">{value}٪</span>
+    </div>
+  )
+}
 
 const CATEGORY_TRANSLATIONS: Record<string, string> = {
   "Vision & Business Concept": "چشم‌انداز و مفهوم کسب و کار",
@@ -197,9 +215,74 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
   const ambientRef = useRef(true)
 
   const [selectedRow, setSelectedRow] = useState<SheetRow | null>(null)
-  const [topicGroupSelected, setTopicGroupSelected] = useState<{ topicName: string; category: string; rows: SheetRow[] } | null>(null)
+  const [nodeDetailsSelected, setNodeDetailsSelected] = useState<{
+    title: string
+    category: string
+    rows: SheetRow[]
+    type: "hub" | "topic"
+  } | null>(null)
   const [legend, setLegend] = useState<{ category: string; color: string }[]>([])
   const [nodeCount, setNodeCount] = useState(0)
+
+  const sortedDetailsRows = useMemo(() => {
+    if (!nodeDetailsSelected) return []
+    return [...nodeDetailsSelected.rows].sort((a, b) => {
+      const priorityOrder: Record<string, number> = { Critical: 4, High: 3, Medium: 2, Low: 1 }
+      const pA = priorityOrder[a.values["Priority"]] ?? 0
+      const pB = priorityOrder[b.values["Priority"]] ?? 0
+      if (pA !== pB) return pB - pA
+      const cA = Number(a.values["Confidence Score"]) || 0
+      const cB = Number(b.values["Confidence Score"]) || 0
+      return cB - cA
+    })
+  }, [nodeDetailsSelected])
+
+  const handleDownloadCSV = () => {
+    if (!nodeDetailsSelected || sortedDetailsRows.length === 0) return
+
+    const BOM = "\uFEFF"
+    const csvHeaders = [
+      "شماره سطر",
+      "موضوع",
+      "دسته‌بندی اصلی",
+      "نوع یافته",
+      "خلاصه یافته",
+      "اولویت",
+      "درصد اطمینان",
+      "فرستنده",
+      "تاریخ ثبت",
+      "متن خام یادداشت"
+    ]
+
+    const csvLines = [csvHeaders.join(",")]
+
+    for (const r of sortedDetailsRows) {
+      const { sender, date } = getRowMetadata(r.values)
+      const rowData = [
+        r.rowNumber,
+        `"${(r.values["Topic"] || "بدون موضوع").replace(/"/g, '""')}"`,
+        `"${translateCategory(r.values["Category"]).replace(/"/g, '""')}"`,
+        `"${(r.values["Insight Type"] || "—").replace(/"/g, '""')}"`,
+        `"${(r.values["Summary"] || "—").replace(/"/g, '""')}"`,
+        `"${(r.values["Priority"] || "—").replace(/"/g, '""')}"`,
+        `"${r.values["Confidence Score"] ? `${r.values["Confidence Score"]}%` : "—"}"`,
+        `"${(sender || "—").replace(/"/g, '""')}"`,
+        `"${(date || "—").replace(/"/g, '""')}"`,
+        `"${(r.values[RAW_CONTENT] || "").replace(/"/g, '""')}"`
+      ]
+      csvLines.push(rowData.join(","))
+    }
+
+    const blob = new Blob([BOM + csvLines.join("\n")], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    const safeTitle = nodeDetailsSelected.title.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_")
+    link.setAttribute("download", `تحلیل_موضوع_${safeTitle}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   const rowMap = useMemo(() => {
     const m = new Map<number, SheetRow>()
@@ -561,17 +644,26 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
         const sim = simRef.current
         if (sim) sim.alphaTarget(ambientRef.current ? 0.015 : 0)
         if (!moved && dragNode) {
-          if (dragNode.kind === "topic" && dragNode.rowNumbers) {
+          if (dragNode.kind === "hub") {
+            const matchedRows = rows.filter(
+              (r) =>
+                (r.values[STATUS] ?? "").trim() === "Completed" &&
+                normalizeCategory(r.values["Category"]) === dragNode.category
+            )
+            setNodeDetailsSelected({
+              title: translateCategory(dragNode.category),
+              category: dragNode.category,
+              rows: matchedRows,
+              type: "hub",
+            })
+          } else if (dragNode.kind === "topic" && dragNode.rowNumbers) {
             const matchedRows = dragNode.rowNumbers.map((rn) => rowMap.get(rn)).filter(Boolean) as SheetRow[]
-            if (matchedRows.length === 1) {
-              setSelectedRow(matchedRows[0])
-            } else if (matchedRows.length > 1) {
-              setTopicGroupSelected({
-                topicName: dragNode.label,
-                category: dragNode.category,
-                rows: matchedRows,
-              })
-            }
+            setNodeDetailsSelected({
+              title: dragNode.label,
+              category: dragNode.category,
+              rows: matchedRows,
+              type: "topic",
+            })
           }
         }
       }
@@ -706,61 +798,115 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
 
       <RowDetailDialog row={selectedRow} onClose={() => setSelectedRow(null)} />
 
-      {/* Group Messages Selector Dialog */}
-      <Dialog open={!!topicGroupSelected} onOpenChange={(open) => !open && setTopicGroupSelected(null)}>
-        <DialogContent className="max-w-xl p-6 bg-card/95 backdrop-blur-xl border-border/80 shadow-2xl rounded-2xl">
+      {/* Node Details selector dialog with sorting & download */}
+      <Dialog open={!!nodeDetailsSelected} onOpenChange={(open) => !open && setNodeDetailsSelected(null)}>
+        <DialogContent className="max-w-2xl p-6 bg-card/95 backdrop-blur-xl border-border/80 shadow-2xl rounded-2xl">
           <DialogHeader className="text-right sm:text-right flex flex-col gap-1.5 border-b border-border pb-4">
-            <div className="flex items-center justify-between gap-2" dir="rtl">
-              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground font-sans">
-                پیام‌های موضوع: {topicGroupSelected?.topicName}
-              </DialogTitle>
-              <Badge variant="outline" className="font-normal" style={{ borderColor: topicGroupSelected ? resolveColor(categoryColor(topicGroupSelected.category)) : undefined }}>
-                {translateCategory(topicGroupSelected?.category || "")}
-              </Badge>
+            <div className="flex items-center justify-between gap-4" dir="rtl">
+              <div className="flex flex-col gap-1 text-right">
+                <DialogTitle className="text-lg font-bold tracking-tight text-foreground font-sans">
+                  {nodeDetailsSelected?.title}
+                </DialogTitle>
+                <div className="flex items-center gap-2 mt-1 justify-start">
+                  <Badge variant="outline" className="font-normal border-primary/30 text-primary bg-primary/5">
+                    {nodeDetailsSelected?.type === "hub" ? "خوشه دسته‌بندی اصلی" : "نود موضوع تحلیل‌شده"}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground font-sans">
+                    تعداد: {sortedDetailsRows.length} یافته
+                  </span>
+                </div>
+              </div>
+              
+              <Button
+                onClick={handleDownloadCSV}
+                className="gap-2 text-xs font-semibold px-4 h-9 rounded-xl shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 transition-all flex items-center"
+              >
+                <Download className="size-4" />
+                دانلود خروجی اکسل (CSV)
+              </Button>
             </div>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 mt-4 max-h-[50vh] overflow-y-auto p-1" dir="rtl">
-            {topicGroupSelected?.rows.map((row) => {
-              const { sender, date } = getRowMetadata(row.values)
-              const raw = row.values[RAW_CONTENT] || ""
-              return (
-                <div
-                  key={row.rowNumber}
-                  onClick={() => {
-                    setSelectedRow(row)
-                    setTopicGroupSelected(null)
-                  }}
-                  className="group relative flex flex-col gap-2 p-4 rounded-xl border border-border/60 bg-card/30 transition-all hover:bg-accent/40 hover:border-primary/30 cursor-pointer text-right"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      {sender && (
-                        <span className="bg-secondary px-1.5 py-0.5 rounded text-[9px] font-semibold text-secondary-foreground border border-border/40">
-                          {sender}
+          <div className="flex flex-col gap-3.5 mt-4 max-h-[55vh] overflow-y-auto p-1" dir="rtl">
+            {sortedDetailsRows.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm font-sans">
+                هیچ یادداشت تحلیل‌شده‌ای در این دسته‌بندی یافت نشد.
+              </div>
+            ) : (
+              sortedDetailsRows.map((row, idx) => {
+                const { sender, date } = getRowMetadata(row.values)
+                const raw = row.values[RAW_CONTENT] || ""
+                const conf = Number(row.values["Confidence Score"]) || 0
+                const priority = row.values["Priority"] || ""
+                
+                return (
+                  <div
+                    key={row.rowNumber}
+                    onClick={() => {
+                      setSelectedRow(row)
+                      setNodeDetailsSelected(null)
+                    }}
+                    className="group relative flex flex-col gap-2.5 p-4 rounded-xl border border-border/60 bg-card/30 transition-all hover:bg-accent/40 hover:border-primary/40 cursor-pointer text-right"
+                  >
+                    {/* Item header */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/20 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-md font-sans font-medium">
+                          رتبه {idx + 1} اهمیت
                         </span>
-                      )}
-                      {date && (
-                        <span className="font-mono text-[9px] text-muted-foreground">
-                          {date}
-                        </span>
-                      )}
+                        <span className="text-[10px] text-muted-foreground/60 font-sans">سطر {row.rowNumber}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {priority && (
+                          <Badge
+                            variant="outline"
+                            className={cn("font-normal text-[9px] px-1.5 py-0.5 leading-none", PRIORITY_STYLES[priority])}
+                          >
+                            {PRIORITY_TRANSLATIONS[priority] || priority}
+                          </Badge>
+                        )}
+                        {conf > 0 && <ConfidenceBar value={conf} />}
+                      </div>
                     </div>
-                    <span className="text-[10px] text-muted-foreground/60 font-medium">سطر {row.rowNumber}</span>
-                  </div>
 
-                  <p className="text-sm text-foreground/90 line-clamp-2 leading-relaxed whitespace-pre-wrap" dir="auto">
-                    {raw.length > 120 ? raw.slice(0, 120) + "..." : raw}
-                  </p>
+                    {/* Topic/Title & snippet */}
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-semibold text-primary text-sm line-clamp-1 leading-snug group-hover:text-primary/80 transition-colors">
+                        {row.values["Topic"] || "بدون موضوع"}
+                      </h4>
+                      {row.values["Summary"] && (
+                        <p className="text-xs font-medium text-foreground/80 line-clamp-2 leading-relaxed mt-0.5">
+                          {row.values["Summary"]}
+                        </p>
+                      )}
+                      <p className="text-[11px] text-muted-foreground/75 line-clamp-1 leading-relaxed mt-0.5">
+                        {raw}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center justify-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-xs font-semibold text-primary flex items-center gap-1">
-                      مشاهده جزئیات کامل ←
-                    </span>
+                    {/* Metadata footer */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-1">
+                      <div className="flex items-center gap-2 text-[10px]">
+                        {sender && (
+                          <span className="bg-secondary/60 px-2 py-0.5 rounded text-[10px] text-secondary-foreground font-medium font-sans">
+                            فرستنده: {sender}
+                          </span>
+                        )}
+                        {date && (
+                          <span className="font-mono text-[9px] text-muted-foreground/75">
+                            {date}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 font-sans">
+                        مشاهده تحلیل کامل ←
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </DialogContent>
       </Dialog>
