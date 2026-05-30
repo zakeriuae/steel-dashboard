@@ -202,7 +202,7 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
     const sim = forceSimulation<GraphNode, GraphLink>(nodes)
       .force(
         "charge",
-        forceManyBody<GraphNode>().strength((d) => (d.kind === "root" ? -600 : d.kind === "hub" ? -350 : -90)),
+        forceManyBody<GraphNode>().strength((d) => (d.kind === "root" ? -2500 : d.kind === "hub" ? -1200 : -200)),
       )
       .force(
         "link",
@@ -210,17 +210,17 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
           .id((d) => d.id)
           .distance((l) => {
             const tg = l.target as GraphNode
-            if (tg.kind === "root") return 140
-            if (tg.kind === "hub") return 70
+            if (tg.kind === "root") return 260
+            if (tg.kind === "hub") return 110
             return 100
           })
           .strength((l) => l.strength),
       )
-      .force("collide", forceCollide<GraphNode>().radius((d) => d.radius + 8))
-      .force("x", forceX(0).strength(0.03))
-      .force("y", forceY(0).strength(0.03))
-      .alphaDecay(0.015)
-      .velocityDecay(0.35)
+      .force("collide", forceCollide<GraphNode>().radius((d) => d.radius + 25))
+      .force("x", forceX(0).strength(0.015))
+      .force("y", forceY(0).strength(0.015))
+      .alphaDecay(0.012)
+      .velocityDecay(0.4)
 
     sim.on("tick", () => {
       // Persist positions so adding/removing nodes is a soft transition.
