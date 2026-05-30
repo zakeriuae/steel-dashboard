@@ -12,6 +12,7 @@ import { TableView } from "@/components/table-view"
 import { MindMapView } from "@/components/mind-map-view"
 import { ErrorLogModal, type LogEntry } from "@/components/error-log-modal"
 import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 const fetcher = async (url: string): Promise<SheetData> => {
   const res = await fetch(url)
@@ -32,6 +33,8 @@ export function Dashboard() {
   const [activeRow, setActiveRow] = useState<number | null>(null)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [logOpen, setLogOpen] = useState(false)
+  const [analysisModalOpen, setAnalysisModalOpen] = useState(false)
+  const [wasAborted, setWasAborted] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const [filterShort, setFilterShort] = useState(true)
@@ -43,6 +46,23 @@ export function Dashboard() {
   }, [allRows, filterShort])
 
   const headers = data?.headers ?? []
+
+  const activeRowData = useMemo(() => {
+    if (activeRow === null) return null
+    return allRows.find((r) => r.rowNumber === activeRow)
+  }, [allRows, activeRow])
+
+  const activeRowSnippet = useMemo(() => {
+    if (!activeRowData) return ""
+    const title = activeRowData.values["Title"] || ""
+    const content = activeRowData.values[RAW_CONTENT] || ""
+    return title ? `${title} (${content.slice(0, 40)}...)` : content.slice(0, 60) + "..."
+  }, [activeRowData])
+
+  const handleStopAnalysis = useCallback(() => {
+    abortRef.current?.abort()
+    setWasAborted(true)
+  }, [])
 
   const pendingCount = useMemo(
     () => rows.filter((r) => (r.values[STATUS] ?? "").trim() === "" && (r.values[RAW_CONTENT] ?? "").trim() !== "").length,
@@ -178,6 +198,14 @@ export function Dashboard() {
     [running, addLog, patchRow, mutate],
   )
 
+  const handleStartAnalysis = useCallback(() => {
+    setAnalysisModalOpen(true)
+    setWasAborted(false)
+    if (!running) {
+      runAnalysis()
+    }
+  }, [running, runAnalysis])
+
   const retryRow = useCallback((row: SheetRow) => runAnalysis([row.rowNumber]), [runAnalysis])
 
   return (
@@ -188,7 +216,7 @@ export function Dashboard() {
         completedCount={completedCount}
         errorCount={errorCount}
         progress={progress}
-        onRun={() => runAnalysis()}
+        onRun={handleStartAnalysis}
         onRefresh={() => mutate()}
         onOpenLogs={() => setLogOpen(true)}
         logCount={logs.length}
@@ -242,6 +270,100 @@ export function Dashboard() {
       </main>
 
       <ErrorLogModal open={logOpen} onOpenChange={setLogOpen} logs={logs} onClear={() => setLogs([])} />
+
+      <Dialog open={analysisModalOpen} onOpenChange={setAnalysisModalOpen}>
+        <DialogContent className="max-w-md p-6 bg-card/95 backdrop-blur-xl border-border/80 shadow-2xl rounded-2xl">
+          <DialogHeader className="text-right sm:text-right flex flex-col gap-1.5">
+            <DialogTitle className="text-lg font-semibold tracking-tight text-foreground font-sans flex items-center justify-between gap-2" dir="rtl">
+              <span>تحلیل هوشمند فایل</span>
+              {running && <Loader2 className="size-4 animate-spin text-primary" />}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-5 mt-4" dir="rtl">
+            {/* Progress Info */}
+            <div className="flex justify-between items-center text-sm font-medium">
+              <span className="text-muted-foreground font-sans">میزان پیشرفت:</span>
+              <span className="text-foreground font-mono font-semibold tabular-nums">
+                {progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0}% ({progress.current} از {progress.total} سطر)
+              </span>
+            </div>
+
+            {/* Progress Bar */}
+            <Progress
+              value={progress.total > 0 ? (progress.current / progress.total) * 100 : 0}
+              className="h-2 rounded-full overflow-hidden bg-muted"
+            />
+
+            {/* Current Active Item */}
+            {running && activeRow && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm transition-all animate-pulse">
+                <div className="font-semibold text-primary mb-1 flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                  <span>در حال پردازش سطر {activeRow}</span>
+                </div>
+                <p className="text-muted-foreground text-xs line-clamp-2 leading-relaxed" dir="auto">
+                  {activeRowSnippet || "در حال آماده‌سازی اطلاعات..."}
+                </p>
+              </div>
+            )}
+
+            {/* Finished/Stopped Status Cards */}
+            {!running && (
+              <div className={cn(
+                "rounded-xl border p-4 text-sm",
+                progress.current === progress.total && progress.total > 0
+                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
+                  : "border-amber-500/20 bg-amber-500/5 text-amber-400"
+              )}>
+                <div className="font-semibold mb-1 flex items-center gap-1.5">
+                  {progress.current === progress.total && progress.total > 0 ? "✓ تحلیل با موفقیت به پایان رسید" : "⚠ تحلیل متوقف شد"}
+                </div>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  {progress.current === progress.total && progress.total > 0
+                    ? `تمامی ${progress.total} سطر با موفقیت تحلیل و ثبت شدند.`
+                    : `${progress.current} سطر تحلیل شده است. ${progress.total - progress.current} سطر باقی مانده است.`
+                  }
+                </p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-2 justify-end mt-2">
+              {running ? (
+                <Button
+                  variant="destructive"
+                  className="w-full h-10 font-semibold text-sm rounded-xl gap-2 shadow-lg shadow-destructive/15 transition-all hover:scale-[1.01]"
+                  onClick={handleStopAnalysis}
+                >
+                  توقف موقت تحلیل
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 font-medium text-sm rounded-xl transition-all border-border/80 hover:bg-muted"
+                    onClick={() => setAnalysisModalOpen(false)}
+                  >
+                    بستن
+                  </Button>
+                  {progress.current < progress.total && (
+                    <Button
+                      className="flex-1 h-10 font-semibold text-sm rounded-xl gap-2 shadow-lg shadow-primary/15 transition-all hover:scale-[1.01]"
+                      onClick={handleStartAnalysis}
+                    >
+                      {wasAborted ? "ادامه تحلیل" : "شروع تحلیل"}
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -318,9 +440,9 @@ function Header(props: {
               </span>
             )}
           </Button>
-          <Button onClick={onRun} disabled={running} className="gap-2">
+          <Button onClick={onRun} className="gap-2">
             {running ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {running ? "Analyzing…" : "Run AI Analysis"}
+            {running ? "نمایش وضعیت تحلیل…" : "Run AI Analysis"}
           </Button>
         </div>
       </div>
