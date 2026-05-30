@@ -18,15 +18,17 @@ import { Badge } from "@/components/ui/badge"
 import { RAW_CONTENT, STATUS, type SheetRow } from "@/lib/types"
 import { categoryColor } from "@/lib/field-meta"
 import { RowDetailDialog } from "@/components/row-detail-dialog"
+import { cn, getRowMetadata } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface GraphNode extends SimulationNodeDatum {
   id: string
-  kind: "topic" | "hub"
+  kind: "root" | "hub" | "topic"
   label: string
   category: string
   color: string
   radius: number
-  rowNumber?: number
+  rowNumbers?: number[]
 }
 
 type GraphLink = SimulationLinkDatum<GraphNode> & { strength: number }
@@ -62,6 +64,7 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
   const ambientRef = useRef(true)
 
   const [selectedRow, setSelectedRow] = useState<SheetRow | null>(null)
+  const [topicGroupSelected, setTopicGroupSelected] = useState<{ topicName: string; category: string; rows: SheetRow[] } | null>(null)
   const [legend, setLegend] = useState<{ category: string; color: string }[]>([])
   const [nodeCount, setNodeCount] = useState(0)
 
@@ -79,11 +82,29 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
         ((r.values["Topic"] ?? "").trim() || (r.values["Title"] ?? "").trim()),
     )
 
-    const hubMap = new Map<string, GraphNode>()
     const nodes: GraphNode[] = []
     const links: GraphLink[] = []
     const prev = positionsRef.current
 
+    // 1. Create Root Node "AI Steel"
+    const rootId = "root:aisteel"
+    const rootP = prev.get(rootId)
+    const rootNode: GraphNode = {
+      id: rootId,
+      kind: "root",
+      label: "AI Steel",
+      category: "Root",
+      color: "#3b82f6",
+      radius: 20,
+      x: rootP?.x ?? 0,
+      y: rootP?.y ?? 0,
+      fx: 0,
+      fy: 0,
+    }
+    nodes.push(rootNode)
+
+    // 2. Create Hub Nodes (Categories)
+    const hubMap = new Map<string, GraphNode>()
     const ensureHub = (category: string): GraphNode | null => {
       const cat = category.trim()
       if (!cat) return null
@@ -97,56 +118,78 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
         category: cat,
         color: resolveColor(categoryColor(cat)),
         radius: 14,
-        x: p?.x ?? (Math.random() - 0.5) * 200,
-        y: p?.y ?? (Math.random() - 0.5) * 200,
+        x: p?.x ?? (Math.random() - 0.5) * 150,
+        y: p?.y ?? (Math.random() - 0.5) * 150,
       }
       hubMap.set(cat, hub)
       nodes.push(hub)
+
+      // Connect Hub directly to AI Steel Root node!
+      links.push({ source: id, target: rootId, strength: 0.9 })
       return hub
     }
 
+    // 3. Group analyzed rows by unique Category and Topic combination
+    const topicGroupMap = new Map<string, SheetRow[]>()
     for (const r of analyzed) {
-      const id = `row:${r.rowNumber}`
-      const label = (r.values["Topic"] ?? "").trim() || (r.values["Title"] ?? "").trim()
       const category = (r.values["Category"] ?? "").trim() || "Uncategorized"
+      const topicName = (r.values["Topic"] ?? "").trim() || (r.values["Title"] ?? "").trim()
+      const key = `${category}::${topicName}`
+
+      if (!topicGroupMap.has(key)) {
+        topicGroupMap.set(key, [])
+      }
+      topicGroupMap.get(key)!.push(r)
+    }
+
+    // 4. Create Topic Nodes
+    for (const [key, groupRows] of topicGroupMap.entries()) {
+      const [category, topicName] = key.split("::")
+      const id = `topic:${key}`
       const p = prev.get(id)
+
+      // Radius depends on the number of messages inside the node!
+      const radius = 7 + Math.min(8, (groupRows.length - 1) * 2)
+      const rowNumbers = groupRows.map((r) => r.rowNumber)
+
       const node: GraphNode = {
         id,
         kind: "topic",
-        label,
+        label: topicName,
         category,
         color: resolveColor(categoryColor(category)),
-        radius: 7,
-        rowNumber: r.rowNumber,
+        radius,
+        rowNumbers,
         x: p?.x ?? (Math.random() - 0.5) * 600,
         y: p?.y ?? (Math.random() - 0.5) * 600,
       }
       nodes.push(node)
 
+      // Connect Topic Node to its Category Hub Node
       const hub = ensureHub(category)
-      if (hub) links.push({ source: node.id, target: hub.id, strength: 0.7 })
-
-      // Secondary categories create weaker links for cross-cluster gravity.
-      const secondary = (r.values["Secondary Categories"] ?? "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-      for (const sc of secondary) {
-        const shub = ensureHub(sc)
-        if (shub) links.push({ source: node.id, target: shub.id, strength: 0.15 })
+      if (hub) {
+        links.push({ source: id, target: hub.id, strength: 0.6 })
       }
-    }
 
-    // Connect hubs loosely to keep the whole graph cohesive.
-    const hubs = Array.from(hubMap.values())
-    for (let i = 1; i < hubs.length; i++) {
-      links.push({ source: hubs[0].id, target: hubs[i].id, strength: 0.02 })
+      // Check secondary categories for cross-cluster gravity links
+      for (const r of groupRows) {
+        const secondary = (r.values["Secondary Categories"] ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+        for (const sc of secondary) {
+          const shub = ensureHub(sc)
+          if (shub) {
+            links.push({ source: id, target: shub.id, strength: 0.12 })
+          }
+        }
+      }
     }
 
     nodesRef.current = nodes
     linksRef.current = links
     setNodeCount(nodes.filter((n) => n.kind === "topic").length)
-    setLegend(hubs.map((h) => ({ category: h.category, color: h.color })))
+    setLegend(Array.from(hubMap.values()).map((h) => ({ category: h.category, color: h.color })))
     return { nodes, links }
   }, [rows])
 
@@ -159,13 +202,18 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
     const sim = forceSimulation<GraphNode, GraphLink>(nodes)
       .force(
         "charge",
-        forceManyBody<GraphNode>().strength((d) => (d.kind === "hub" ? -400 : -90)),
+        forceManyBody<GraphNode>().strength((d) => (d.kind === "root" ? -600 : d.kind === "hub" ? -350 : -90)),
       )
       .force(
         "link",
         forceLink<GraphNode, GraphLink>(links)
           .id((d) => d.id)
-          .distance((l) => ((l.target as GraphNode).kind === "hub" ? 70 : 120))
+          .distance((l) => {
+            const tg = l.target as GraphNode
+            if (tg.kind === "root") return 140
+            if (tg.kind === "hub") return 70
+            return 100
+          })
           .strength((l) => l.strength),
       )
       .force("collide", forceCollide<GraphNode>().radius((d) => d.radius + 8))
@@ -257,29 +305,30 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
       // Nodes.
       for (const n of nodes) {
         if (n.x == null || n.y == null) continue
+        const isRoot = n.kind === "root"
         const isHub = n.kind === "hub"
         const isHover = hover === n
-        const isActive = n.rowNumber != null && n.rowNumber === activeRow
+        const isActive = n.rowNumbers?.includes(activeRow ?? -1)
 
-        // Glow for active/hovered nodes.
-        if (isHover || isActive) {
+        // Glow for active/hovered/root nodes.
+        if (isHover || isActive || isRoot) {
           ctx.beginPath()
           ctx.arc(n.x, n.y, n.radius + 6, 0, Math.PI * 2)
-          ctx.fillStyle = withAlpha(n.color, 0.18)
+          ctx.fillStyle = withAlpha(n.color, isRoot ? 0.08 : 0.18)
           ctx.fill()
         }
 
         ctx.beginPath()
         ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2)
-        ctx.fillStyle = isHub ? n.color : withAlpha(n.color, 0.85)
+        ctx.fillStyle = isRoot ? "#3b82f6" : isHub ? n.color : withAlpha(n.color, 0.85)
         ctx.fill()
-        ctx.lineWidth = (isHub ? 2 : 1.5) / t.k
-        ctx.strokeStyle = withAlpha("#ffffff", isHub ? 0.5 : 0.3)
+        ctx.lineWidth = (isRoot ? 2.5 : isHub ? 2 : 1.5) / t.k
+        ctx.strokeStyle = withAlpha("#ffffff", isRoot ? 0.7 : isHub ? 0.5 : 0.3)
         ctx.stroke()
 
         // Glassmorphism label card.
-        if (showLabels && (isHub || isHover || n.radius > 6)) {
-          drawLabel(ctx, n, t.k, isHub, isHover)
+        if (showLabels && (isRoot || isHub || isHover || n.radius > 7)) {
+          drawLabel(ctx, n, t.k, isRoot || isHub, isHover)
         }
       }
 
@@ -378,9 +427,19 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
         dragNode.fy = null
         const sim = simRef.current
         if (sim) sim.alphaTarget(ambientRef.current ? 0.015 : 0)
-        if (!moved && dragNode.rowNumber != null) {
-          const row = rowMap.get(dragNode.rowNumber)
-          if (row) setSelectedRow(row)
+        if (!moved && dragNode) {
+          if (dragNode.kind === "topic" && dragNode.rowNumbers) {
+            const matchedRows = dragNode.rowNumbers.map((rn) => rowMap.get(rn)).filter(Boolean) as SheetRow[]
+            if (matchedRows.length === 1) {
+              setSelectedRow(matchedRows[0])
+            } else if (matchedRows.length > 1) {
+              setTopicGroupSelected({
+                topicName: dragNode.label,
+                category: dragNode.category,
+                rows: matchedRows,
+              })
+            }
+          }
         }
       }
       mode = "idle"
@@ -513,6 +572,65 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
       )}
 
       <RowDetailDialog row={selectedRow} onClose={() => setSelectedRow(null)} />
+
+      {/* Group Messages Selector Dialog */}
+      <Dialog open={!!topicGroupSelected} onOpenChange={(open) => !open && setTopicGroupSelected(null)}>
+        <DialogContent className="max-w-xl p-6 bg-card/95 backdrop-blur-xl border-border/80 shadow-2xl rounded-2xl">
+          <DialogHeader className="text-right sm:text-right flex flex-col gap-1.5 border-b border-border pb-4">
+            <div className="flex items-center justify-between gap-2" dir="rtl">
+              <DialogTitle className="text-lg font-semibold tracking-tight text-foreground font-sans">
+                پیام‌های موضوع: {topicGroupSelected?.topicName}
+              </DialogTitle>
+              <Badge variant="outline" className="font-normal" style={{ borderColor: topicGroupSelected ? resolveColor(categoryColor(topicGroupSelected.category)) : undefined }}>
+                {topicGroupSelected?.category}
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 mt-4 max-h-[50vh] overflow-y-auto p-1" dir="rtl">
+            {topicGroupSelected?.rows.map((row) => {
+              const { sender, date } = getRowMetadata(row.values)
+              const raw = row.values[RAW_CONTENT] || ""
+              return (
+                <div
+                  key={row.rowNumber}
+                  onClick={() => {
+                    setSelectedRow(row)
+                    setTopicGroupSelected(null)
+                  }}
+                  className="group relative flex flex-col gap-2 p-4 rounded-xl border border-border/60 bg-card/30 transition-all hover:bg-accent/40 hover:border-primary/30 cursor-pointer text-right"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs">
+                      {sender && (
+                        <span className="bg-secondary px-1.5 py-0.5 rounded text-[9px] font-semibold text-secondary-foreground border border-border/40">
+                          {sender}
+                        </span>
+                      )}
+                      {date && (
+                        <span className="font-mono text-[9px] text-muted-foreground">
+                          {date}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground/60 font-medium">سطر {row.rowNumber}</span>
+                  </div>
+
+                  <p className="text-sm text-foreground/90 line-clamp-2 leading-relaxed whitespace-pre-wrap" dir="auto">
+                    {raw.length > 120 ? raw.slice(0, 120) + "..." : raw}
+                  </p>
+
+                  <div className="flex items-center justify-end mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-xs font-semibold text-primary flex items-center gap-1">
+                      مشاهده جزئیات کامل ←
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
