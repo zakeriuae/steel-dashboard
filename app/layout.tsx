@@ -21,8 +21,8 @@ const vazirmatn = Vazirmatn({
 })
 
 export const metadata: Metadata = {
-  title: 'Insight Board — AI Sheet Analysis (Farsi Support)',
-  description: 'Turn raw Google Sheets notes into structured business intelligence with AI analysis, a sortable table, and a physics-based knowledge graph.',
+  title: 'پنل تحلیل هوشمند فولاد | AI Steel Insight Board',
+  description: 'تبدیل یادداشت‌های خام گوگل شیت به تحلیل‌های تجاری ساختاریافته به همراه جدول هوشمند و نقشه دانش تعاملی',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -49,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`dark bg-background ${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
+    <html lang="fa" dir="rtl" className={`dark bg-background ${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
       <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

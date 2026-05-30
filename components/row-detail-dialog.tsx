@@ -8,6 +8,78 @@ import { cn, getRowMetadata } from "@/lib/utils"
 import { AI_FIELDS, RAW_CONTENT, STATUS, ERROR_DETAILS, type SheetRow } from "@/lib/types"
 import { PRIORITY_STYLES, STATUS_STYLES, INSIGHT_STYLES } from "@/lib/field-meta"
 
+const FIELD_TRANSLATIONS: Record<string, string> = {
+  "Category": "دسته‌بندی اصلی",
+  "Secondary Categories": "دسته‌بندی‌های ثانویه",
+  "Topic": "موضوع پیشنهادی",
+  "Title": "عنوان تحلیل",
+  "Summary": "خلاصه یادداشت",
+  "Tags": "برچسب‌های کلیدی",
+  "Insight Type": "نوع یافته / تحلیل",
+  "Priority": "سطح اولویت",
+  "Business Stage": "مرحله کسب و کار",
+  "Strategic Importance": "اهمیت استراتژیک",
+  "Confidence Score": "درصد اطمینان هوش مصنوعی",
+  "Action Items": "اقدامات پیشنهادی بعدی",
+  "Owner": "مسئول پیشنهادی",
+  "Related Project": "پروژه مرتبط",
+  "Risks": "ریسک‌های شناسایی‌شده",
+  "Opportunities": "فرصت‌های شناسایی‌شده",
+  "Revenue Model": "مدل درآمدی مرتبط",
+  "Normalized Content": "محتوای نرمال‌سازی شده",
+  "Raw Content": "متن خام اولیه",
+}
+
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  "Vision & Business Concept": "چشم‌انداز و مفهوم کسب و کار",
+  "Business Model": "مدل کسب و کار",
+  "Strategy": "استراتژی",
+  "Product": "محصول",
+  "Services": "خدمات",
+  "AI Solutions": "راهکارهای هوش مصنوعی",
+  "Steel Industry Applications": "کاربردهای صنعت فولاد",
+  "Market Research": "تحقیقات بازار",
+  "Sales": "فروش",
+  "Marketing": "بازاریابی",
+  "Operations": "عملیات",
+  "Technology & Infrastructure": "فناوری و زیرساخت",
+  "Finance": "مالی",
+  "Legal & DIFC": "حقوقی و منطقه DIFC",
+  "Partnerships": "شراکت‌ها و همکاری‌ها",
+  "Investment & Fundraising": "سرمایه‌گذاری و جذب سرمایه",
+  "Risk Assessment": "ارزیابی ریسک",
+  "Decisions": "تصمیمات",
+  "Tasks & Action Items": "کارها و اقدامات پیشنهادی",
+  "Meetings & Discussions": "جلسات و گفتگوها",
+  "Uncategorized": "دسته‌بندی نشده",
+}
+
+const PRIORITY_TRANSLATIONS: Record<string, string> = {
+  Low: "کم",
+  Medium: "متوسط",
+  High: "زیاد",
+  Critical: "بحرانی",
+}
+
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  Completed: "تحلیل شده",
+  Error: "خطا",
+  Processing: "در حال پردازش",
+  Pending: "در انتظار تحلیل",
+  "": "در انتظار تحلیل",
+}
+
+const INSIGHT_TRANSLATIONS: Record<string, string> = {
+  Idea: "ایده",
+  Decision: "تصمیم",
+  Risk: "ریسک",
+  Opportunity: "فرصت",
+  Task: "کار / وظیفه",
+  Question: "سؤال",
+  Recommendation: "توصیه",
+  Learning: "یادگیری",
+}
+
 const LIST_FIELDS = new Set([
   "Secondary Categories",
   "Tags",
@@ -24,30 +96,30 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
 
   return (
     <Dialog open={!!row} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl gap-0 p-0">
-        <DialogHeader className="border-b border-border p-6 pb-4">
+      <DialogContent className="max-w-2xl gap-0 p-0 text-right">
+        <DialogHeader className="border-b border-border p-6 pb-4 text-right">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={cn("font-normal", STATUS_STYLES[status] ?? STATUS_STYLES[""])}>
-              {status || "Pending"}
+              {STATUS_TRANSLATIONS[status] || STATUS_TRANSLATIONS[""]}
             </Badge>
             {v["Insight Type"] && (
               <Badge variant="outline" className={cn("font-normal", INSIGHT_STYLES[v["Insight Type"]])}>
-                {v["Insight Type"]}
+                {INSIGHT_TRANSLATIONS[v["Insight Type"]] || v["Insight Type"]}
               </Badge>
             )}
             {v["Priority"] && (
               <Badge variant="outline" className={cn("font-normal", PRIORITY_STYLES[v["Priority"]])}>
-                {v["Priority"]}
+                {PRIORITY_TRANSLATIONS[v["Priority"]] || v["Priority"]}
               </Badge>
             )}
-            <span className="ml-auto text-xs text-muted-foreground">Row {row.rowNumber}</span>
+            <span className="mr-auto ml-0 text-xs text-muted-foreground">سطر {row.rowNumber}</span>
           </div>
-          <DialogTitle className="text-pretty text-lg leading-snug" dir="auto">
-            {v["Title"] || "Untitled note"}
+          <DialogTitle className="text-pretty text-lg leading-snug text-right font-sans mt-3" dir="auto">
+            {v["Title"] || "یادداشت بدون عنوان"}
           </DialogTitle>
-          {v["Topic"] && <p className="text-sm text-muted-foreground" dir="auto">{v["Topic"]}</p>}
+          {v["Topic"] && <p className="text-sm text-muted-foreground text-right" dir="auto">{v["Topic"]}</p>}
           {(sender || date) && (
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground/80 font-sans" dir="auto">
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground/80 font-sans text-right" dir="auto">
               {sender && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">فرستنده:</span>
@@ -70,28 +142,28 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
         </DialogHeader>
 
         <ScrollArea className="max-h-[65vh]">
-          <div className="flex flex-col gap-5 p-6">
+          <div className="flex flex-col gap-5 p-6 text-right">
             {status === "Error" && v[ERROR_DETAILS] && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" dir="auto">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive text-right" dir="auto">
                 {v[ERROR_DETAILS]}
               </div>
             )}
 
             {v["Summary"] && (
-              <Section title="Summary">
-                <p className="text-pretty text-sm leading-relaxed text-foreground" dir="auto">{v["Summary"]}</p>
+              <Section title={FIELD_TRANSLATIONS["Summary"] || "خلاصه"}>
+                <p className="text-pretty text-sm leading-relaxed text-foreground text-right" dir="auto">{v["Summary"]}</p>
               </Section>
             )}
 
-            <Section title="Raw Content">
-              <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-muted-foreground" dir="auto">
+            <Section title={FIELD_TRANSLATIONS["Raw Content"] || "متن اولیه"}>
+              <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-muted-foreground text-right" dir="auto">
                 {v[RAW_CONTENT]}
               </p>
             </Section>
 
             {v["Normalized Content"] && v["Normalized Content"] !== v[RAW_CONTENT] && (
-              <Section title="Normalized Content">
-                <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-foreground" dir="auto">
+              <Section title={FIELD_TRANSLATIONS["Normalized Content"] || "متن اصلاح‌شده"}>
+                <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-foreground text-right" dir="auto">
                   {v["Normalized Content"]}
                 </p>
               </Section>
@@ -99,7 +171,7 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
 
             <Separator />
 
-            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 text-right">
               {AI_FIELDS.filter(
                 (f) =>
                   ![
@@ -113,7 +185,7 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
               ).map((field) => {
                 const value = (v[field] ?? "").trim()
                 if (!value) return null
-                return <Field key={field} label={field} value={value} isList={LIST_FIELDS.has(field)} />
+                return <Field key={field} label={FIELD_TRANSLATIONS[field] || field} value={value} isList={LIST_FIELDS.has(field)} fieldName={field} />
               })}
             </div>
           </div>
@@ -125,8 +197,8 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="text-right">
+      <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-primary border-r-2 border-primary pr-2">
         {title}
       </h4>
       {children}
@@ -134,26 +206,31 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Field({ label, value, isList }: { label: string; value: string; isList: boolean }) {
+function Field({ label, value, isList, fieldName }: { label: string; value: string; isList: boolean; fieldName?: string }) {
   return (
-    <div>
+    <div className="text-right">
       <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </h4>
       {isList ? (
-        <div className="flex flex-wrap gap-1.5" dir="auto">
+        <div className="flex flex-wrap gap-1.5 justify-start" dir="auto">
           {value
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
-            .map((item, i) => (
-              <Badge key={i} variant="secondary" className="font-normal">
-                {item}
-              </Badge>
-            ))}
+            .map((item, i) => {
+              const displayVal = fieldName === "Secondary Categories" ? (CATEGORY_TRANSLATIONS[item] || item) : item
+              return (
+                <Badge key={i} variant="secondary" className="font-normal">
+                  {displayVal}
+                </Badge>
+              )
+            })}
         </div>
       ) : (
-        <p className="text-pretty text-sm text-foreground" dir="auto">{value}</p>
+        <p className="text-pretty text-sm text-foreground" dir="auto">
+          {fieldName === "Confidence Score" ? `${value}٪` : value}
+        </p>
       )}
     </div>
   )

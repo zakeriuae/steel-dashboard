@@ -236,14 +236,14 @@ export function Dashboard() {
                   className="gap-2 rounded-none border-b-2 border-transparent bg-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <Table2 className="size-4" />
-                  Table
+                  جدول داده‌ها
                 </TabsTrigger>
                 <TabsTrigger
                   value="map"
                   className="gap-2 rounded-none border-b-2 border-transparent bg-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                 >
                   <Network className="size-4" />
-                  Knowledge Graph
+                  نقشه دانش (گراف)
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -392,18 +392,18 @@ function Header(props: {
             <Sparkles className="size-5" />
           </div>
           <div className="leading-tight">
-            <h1 className="text-sm font-semibold tracking-tight">Insight Board</h1>
-            <p className="text-xs text-muted-foreground">AI sheet analysis</p>
+            <h1 className="text-sm font-semibold tracking-tight">پنل تحلیل هوشمند</h1>
+            <p className="text-xs text-muted-foreground">تحلیل پیشرفته یادداشت‌های صنعت فولاد</p>
           </div>
         </div>
 
-        <div className="hidden items-center gap-4 pl-2 text-xs text-muted-foreground md:flex">
-          <Stat label="Pending" value={pendingCount} dotClass="bg-muted-foreground" />
-          <Stat label="Completed" value={completedCount} dotClass="bg-chart-3" />
-          <Stat label="Errors" value={errorCount} dotClass="bg-destructive" />
+        <div className="hidden items-center gap-4 pr-2 text-xs text-muted-foreground md:flex">
+          <Stat label="در انتظار تحلیل" value={pendingCount} dotClass="bg-muted-foreground" />
+          <Stat label="تحلیل شده" value={completedCount} dotClass="bg-chart-3" />
+          <Stat label="دارای خطا" value={errorCount} dotClass="bg-destructive" />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="mr-auto flex items-center gap-2">
           {running && (
             <div className="hidden w-40 items-center gap-2 sm:flex">
               <Progress value={pct} className="h-1.5" />
@@ -427,13 +427,13 @@ function Header(props: {
             </label>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={onRefresh} disabled={running} title="Refresh data">
+          <Button variant="ghost" size="icon" onClick={onRefresh} disabled={running} title="بروزرسانی داده‌ها">
             <RefreshCw className="size-4" />
-            <span className="sr-only">Refresh</span>
+            <span className="sr-only">بروزرسانی</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={onOpenLogs} className="gap-2">
             <ScrollText className="size-4" />
-            <span className="hidden sm:inline">Logs</span>
+            <span className="hidden sm:inline">گزارش خطاها</span>
             {logCount > 0 && (
               <span className="rounded-full bg-secondary px-1.5 text-xs tabular-nums text-secondary-foreground">
                 {logCount}
@@ -442,7 +442,7 @@ function Header(props: {
           </Button>
           <Button onClick={onRun} className="gap-2">
             {running ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            {running ? "نمایش وضعیت تحلیل…" : "Run AI Analysis"}
+            {running ? "نمایش وضعیت تحلیل…" : "اجرای تحلیل هوشمند"}
           </Button>
         </div>
       </div>
@@ -455,7 +455,7 @@ function Stat({ label, value, dotClass }: { label: string; value: number; dotCla
     <span className="flex items-center gap-1.5">
       <span className={cn("size-1.5 rounded-full", dotClass)} />
       <span className="tabular-nums font-medium text-foreground">{value}</span>
-      {label}
+      <span>{label}</span>
     </span>
   )
 }
@@ -465,15 +465,14 @@ function ConnectionError({ message, onRetry }: { message: string; onRetry: () =>
     <div className="flex flex-1 items-center justify-center p-6">
       <div className="max-w-md rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
         <AlertCircle className="mx-auto mb-3 size-8 text-destructive" />
-        <h2 className="mb-1 text-sm font-semibold">Couldn&apos;t load the sheet</h2>
+        <h2 className="mb-1 text-sm font-semibold">خطا در بارگذاری یادداشت‌ها</h2>
         <p className="mb-4 text-sm text-muted-foreground">{message}</p>
         <p className="mb-4 text-xs text-muted-foreground">
-          Make sure the sheet is shared with your service account email as an Editor, and that the
-          environment variables are set correctly.
+          لطفاً مطمئن شوید که فایل گوگل شیت با ایمیل حساب سرویس به عنوان Editor به اشتراک گذاشته شده است و متغیرهای محیطی به درستی تنظیم شده‌اند.
         </p>
         <Button variant="outline" size="sm" onClick={onRetry} className="gap-2">
           <RefreshCw className="size-4" />
-          Try again
+          تلاش مجدد
         </Button>
       </div>
     </div>

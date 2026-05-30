@@ -45,6 +45,29 @@ export interface SheetData {
   rows: SheetRow[]
 }
 
+export const VALID_CATEGORIES = [
+  "Vision & Business Concept",
+  "Business Model",
+  "Strategy",
+  "Product",
+  "Services",
+  "AI Solutions",
+  "Steel Industry Applications",
+  "Market Research",
+  "Sales",
+  "Marketing",
+  "Operations",
+  "Technology & Infrastructure",
+  "Finance",
+  "Legal & DIFC",
+  "Partnerships",
+  "Investment & Fundraising",
+  "Risk Assessment",
+  "Decisions",
+  "Tasks & Action Items",
+  "Meetings & Discussions",
+] as const
+
 export const INSIGHT_TYPES = [
   "Idea",
   "Decision",

@@ -15,11 +15,40 @@ import {
 import { ZoomIn, ZoomOut, Maximize, Move, Network } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { RAW_CONTENT, STATUS, type SheetRow } from "@/lib/types"
+import { RAW_CONTENT, STATUS, VALID_CATEGORIES, type SheetRow } from "@/lib/types"
 import { categoryColor } from "@/lib/field-meta"
 import { RowDetailDialog } from "@/components/row-detail-dialog"
 import { cn, getRowMetadata } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  "Vision & Business Concept": "چشم‌انداز و مفهوم کسب و کار",
+  "Business Model": "مدل کسب و کار",
+  "Strategy": "استراتژی",
+  "Product": "محصول",
+  "Services": "خدمات",
+  "AI Solutions": "راهکارهای هوش مصنوعی",
+  "Steel Industry Applications": "کاربردهای صنعت فولاد",
+  "Market Research": "تحقیقات بازار",
+  "Sales": "فروش",
+  "Marketing": "بازاریابی",
+  "Operations": "عملیات",
+  "Technology & Infrastructure": "فناوری و زیرساخت",
+  "Finance": "مالی",
+  "Legal & DIFC": "حقوقی و منطقه DIFC",
+  "Partnerships": "شراکت‌ها و همکاری‌ها",
+  "Investment & Fundraising": "سرمایه‌گذاری و جذب سرمایه",
+  "Risk Assessment": "ارزیابی ریسک",
+  "Decisions": "تصمیمات",
+  "Tasks & Action Items": "کارها و اقدامات پیشنهادی",
+  "Meetings & Discussions": "جلسات و گفتگوها",
+  "Uncategorized": "دسته‌بندی نشده",
+}
+
+function translateCategory(category: string): string {
+  const cat = category ? category.trim() : ""
+  return CATEGORY_TRANSLATIONS[cat] || cat || "—"
+}
 
 interface GraphNode extends SimulationNodeDatum {
   id: string
@@ -49,6 +78,110 @@ function resolveColor(value: string): string {
   const resolved = getComputedStyle(document.documentElement).getPropertyValue(token).trim() || "#888"
   colorCache.set(token, resolved)
   return resolved
+}
+
+function normalizeCategory(cat: string): string {
+  const c = (cat || "").trim().toLowerCase()
+  if (!c) return "Meetings & Discussions"
+
+  // Check exact/partial matches in English
+  for (const vc of VALID_CATEGORIES) {
+    if (vc.toLowerCase() === c) return vc
+  }
+
+  // Persian/Farsi & direct mapping rules
+  // 1. Vision & Business Concept
+  if (c.includes("چشم انداز") || c.includes("مفهوم کسب و کار") || c.includes("اهداف") || c.includes("vision")) {
+    return "Vision & Business Concept"
+  }
+  // 2. Business Model
+  if (c.includes("مدل کسب و کار") || c.includes("بیزینس مدل") || c.includes("business model")) {
+    return "Business Model"
+  }
+  // 3. Strategy
+  if (c.includes("استراتژی") || c.includes("بهبود فرآیند") || c.includes("توسعه کسب و کار") || c.includes("strategy")) {
+    return "Strategy"
+  }
+  // 4. Product
+  if (c.includes("محصول") || c.includes("product")) {
+    return "Product"
+  }
+  // 5. Services
+  if (c.includes("خدمات") || c.includes("مشاوره") || c.includes("services")) {
+    return "Services"
+  }
+  // 6. AI Solutions
+  if (c.includes("هوش مصنوعی") || c.includes("تحلیل داده") || c.includes("ai solutions") || c.includes("ai")) {
+    return "AI Solutions"
+  }
+  // 7. Steel Industry Applications
+  if (c.includes("فولاد") || c.includes("صنعت فولاد") || c.includes("steel")) {
+    return "Steel Industry Applications"
+  }
+  // 8. Market Research
+  if (c.includes("تحقیق بازار") || c.includes("بازار") || c.includes("market research")) {
+    return "Market Research"
+  }
+  // 9. Sales
+  if (c.includes("فروش") || c.includes("sales")) {
+    return "Sales"
+  }
+  // 10. Marketing
+  if (c.includes("بازاریابی") || c.includes("تبلیغات") || c.includes("marketing")) {
+    return "Marketing"
+  }
+  // 11. Operations
+  if (c.includes("تولید") || c.includes("فضای کاری") || c.includes("مدیریت") || c.includes("عملیات") || c.includes("operations")) {
+    return "Operations"
+  }
+  // 12. Technology & Infrastructure
+  if (c.includes("فناوری") || c.includes("فنی و مهندسی") || c.includes("زیرساخت") || c.includes("technology")) {
+    return "Technology & Infrastructure"
+  }
+  // 13. Finance
+  if (c.includes("مالی") || c.includes("بانک") || c.includes("حسابداری") || c.includes("finance")) {
+    return "Finance"
+  }
+  // 14. Legal & DIFC
+  if (c.includes("حقوقی") || c.includes("قانون") || c.includes("legal") || c.includes("difc")) {
+    return "Legal & DIFC"
+  }
+  // 15. Partnerships
+  if (c.includes("مشارکت") || c.includes("همکاری") || c.includes("شرکا") || c.includes("partnerships")) {
+    return "Partnerships"
+  }
+  // 16. Investment & Fundraising
+  if (c.includes("سرمایه") || c.includes("سرمایه گذاری") || c.includes("سرمایه‌گذاری") || c.includes("سرمایه گذاری ها") || c.includes("سرمایه‌گذاری‌ها") || c.includes("جذب سرمایه") || c.includes("fundraising") || c.includes("investment")) {
+    return "Investment & Fundraising"
+  }
+  // 17. Risk Assessment
+  if (c.includes("ریسک") || c.includes("ارزیابی ریسک") || c.includes("risk")) {
+    return "Risk Assessment"
+  }
+  // 18. Decisions
+  if (c.includes("تصمیم") || c.includes("تصمیمات") || c.includes("decisions")) {
+    return "Decisions"
+  }
+  // 19. Tasks & Action Items
+  if (c.includes("کارها") || c.includes("وظایف") || c.includes("پروژه") || c.includes("tasks") || c.includes("action items")) {
+    return "Tasks & Action Items"
+  }
+  // 20. Meetings & Discussions
+  if (c.includes("جلسه") || c.includes("مذاکره") || c.includes("گفتگو") || c.includes("meetings")) {
+    return "Meetings & Discussions"
+  }
+
+  // Fallback direct word-by-word containment search in valid categories
+  for (const vc of VALID_CATEGORIES) {
+    const words = vc.toLowerCase().split(/\s+&\s+|\s+/)
+    for (const word of words) {
+      if (word.length > 3 && c.includes(word)) {
+        return vc
+      }
+    }
+  }
+
+  return "Meetings & Discussions"
 }
 
 export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: number | null }) {
@@ -132,7 +265,7 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
     // 3. Group analyzed rows by unique Category and Topic combination
     const topicGroupMap = new Map<string, SheetRow[]>()
     for (const r of analyzed) {
-      const category = (r.values["Category"] ?? "").trim() || "Uncategorized"
+      const category = normalizeCategory(r.values["Category"])
       const topicName = (r.values["Topic"] ?? "").trim() || (r.values["Title"] ?? "").trim()
       const key = `${category}::${topicName}`
 
@@ -178,7 +311,7 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
           .map((s) => s.trim())
           .filter(Boolean)
         for (const sc of secondary) {
-          const shub = ensureHub(sc)
+          const shub = ensureHub(normalizeCategory(sc))
           if (shub) {
             links.push({ source: id, target: shub.id, strength: 0.12 })
           }
@@ -523,9 +656,9 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
             <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
               <Network className="size-6 text-muted-foreground" />
             </div>
-            <h3 className="text-sm font-medium">No analyzed topics yet</h3>
+            <h3 className="text-sm font-medium">هیچ موضوع تحلیل‌شده‌ای وجود ندارد</h3>
             <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-              Run AI analysis to populate the knowledge graph with connected topic nodes.
+              روی اجرای تحلیل هوشمند کلیک کنید تا نودهای متصل در نقشه دانش تشکیل شوند.
             </p>
           </div>
         </div>
@@ -533,29 +666,29 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
 
       {/* Controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 rounded-xl border border-border bg-card/80 p-1.5 backdrop-blur-xl">
-        <Button variant="ghost" size="icon" className="size-8" onClick={() => zoomBy(1.25)} title="Zoom in">
+        <Button variant="ghost" size="icon" className="size-8" onClick={() => zoomBy(1.25)} title="بزرگنمایی">
           <ZoomIn className="size-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-8" onClick={() => zoomBy(0.8)} title="Zoom out">
+        <Button variant="ghost" size="icon" className="size-8" onClick={() => zoomBy(0.8)} title="کوچکنمایی">
           <ZoomOut className="size-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="size-8" onClick={fitView} title="Fit to view">
+        <Button variant="ghost" size="icon" className="size-8" onClick={fitView} title="تنظیم فیت صفحه">
           <Maximize className="size-4" />
         </Button>
       </div>
 
       {/* Legend */}
       {hasData && legend.length > 0 && (
-        <div className="absolute left-4 top-4 max-w-56 rounded-xl border border-border bg-card/80 p-3 backdrop-blur-xl">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <div className="absolute right-4 top-16 max-w-56 rounded-xl border border-border bg-card/80 p-3 backdrop-blur-xl text-right">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground justify-end">
             <Move className="size-3.5" />
-            Drag nodes · scroll to zoom
+            نودها را بکشید · اسکرول برای زوم
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {legend.slice(0, 12).map((l) => (
+          <div className="flex flex-wrap gap-1.5 justify-end">
+            {legend.slice(0, 15).map((l) => (
               <span key={l.category} className="flex items-center gap-1.5 text-xs">
+                <span className="text-foreground">{translateCategory(l.category)}</span>
                 <span className="size-2.5 rounded-full" style={{ backgroundColor: l.color }} />
-                <span className="text-foreground">{l.category}</span>
               </span>
             ))}
           </div>
@@ -567,7 +700,7 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
           variant="outline"
           className="absolute right-4 top-4 border-border bg-card/80 font-normal backdrop-blur-xl"
         >
-          {nodeCount} topics · {legend.length} clusters
+          {nodeCount} موضوع · {legend.length} خوشه دسته‌بندی
         </Badge>
       )}
 
@@ -582,7 +715,7 @@ export function MindMapView({ rows, activeRow }: { rows: SheetRow[]; activeRow: 
                 پیام‌های موضوع: {topicGroupSelected?.topicName}
               </DialogTitle>
               <Badge variant="outline" className="font-normal" style={{ borderColor: topicGroupSelected ? resolveColor(categoryColor(topicGroupSelected.category)) : undefined }}>
-                {topicGroupSelected?.category}
+                {translateCategory(topicGroupSelected?.category || "")}
               </Badge>
             </div>
           </DialogHeader>
@@ -661,7 +794,8 @@ function drawLabel(
 ) {
   const fontSize = isHub ? 12 : 10
   ctx.font = `${isHub ? "600" : "400"} ${fontSize}px ui-sans-serif, system-ui, sans-serif`
-  const text = n.label.length > 28 ? `${n.label.slice(0, 28)}…` : n.label
+  const labelText = isHub ? (CATEGORY_TRANSLATIONS[n.label] || n.label) : n.label
+  const text = labelText.length > 28 ? `${labelText.slice(0, 28)}…` : labelText
   const metrics = ctx.measureText(text)
   const padX = 7
   const padY = 4

@@ -25,6 +25,61 @@ import { RAW_CONTENT, STATUS, type SheetRow } from "@/lib/types"
 import { PRIORITY_STYLES, STATUS_STYLES, INSIGHT_STYLES } from "@/lib/field-meta"
 import { RowDetailDialog } from "@/components/row-detail-dialog"
 
+const CATEGORY_TRANSLATIONS: Record<string, string> = {
+  "Vision & Business Concept": "چشم‌انداز و مفهوم کسب و کار",
+  "Business Model": "مدل کسب و کار",
+  "Strategy": "استراتژی",
+  "Product": "محصول",
+  "Services": "خدمات",
+  "AI Solutions": "راهکارهای هوش مصنوعی",
+  "Steel Industry Applications": "کاربردهای صنعت فولاد",
+  "Market Research": "تحقیقات بازار",
+  "Sales": "فروش",
+  "Marketing": "بازاریابی",
+  "Operations": "عملیات",
+  "Technology & Infrastructure": "فناوری و زیرساخت",
+  "Finance": "مالی",
+  "Legal & DIFC": "حقوقی و منطقه DIFC",
+  "Partnerships": "شراکت‌ها و همکاری‌ها",
+  "Investment & Fundraising": "سرمایه‌گذاری و جذب سرمایه",
+  "Risk Assessment": "ارزیابی ریسک",
+  "Decisions": "تصمیمات",
+  "Tasks & Action Items": "کارها و اقدامات پیشنهادی",
+  "Meetings & Discussions": "جلسات و گفتگوها",
+  "Uncategorized": "دسته‌بندی نشده",
+}
+
+const PRIORITY_TRANSLATIONS: Record<string, string> = {
+  Low: "کم",
+  Medium: "متوسط",
+  High: "زیاد",
+  Critical: "بحرانی",
+}
+
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  Completed: "تحلیل شده",
+  Error: "خطا",
+  Processing: "در حال پردازش",
+  Pending: "در انتظار",
+  "": "در انتظار",
+}
+
+const INSIGHT_TRANSLATIONS: Record<string, string> = {
+  Idea: "ایده",
+  Decision: "تصمیم",
+  Risk: "ریسک",
+  Opportunity: "فرصت",
+  Task: "کار / وظیفه",
+  Question: "سؤال",
+  Recommendation: "توصیه",
+  Learning: "یادگیری",
+}
+
+function translateCategory(category: string): string {
+  const cat = category ? category.trim() : ""
+  return CATEGORY_TRANSLATIONS[cat] || cat || "—"
+}
+
 type SortKey = "Title" | "Category" | "Priority" | "Insight Type" | "Confidence Score" | "AI Analysis Status"
 type SortDir = "asc" | "desc"
 
@@ -116,47 +171,47 @@ export function TableView({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card/40 px-4 py-3 sm:px-6">
         <div className="relative min-w-50 flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search all fields…"
-            className="pl-9"
+            placeholder="جستجو در تمام فیلدها…"
+            className="pr-9 pl-3"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder="وضعیت" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-            <SelectItem value="Processing">Processing</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-            <SelectItem value="Error">Error</SelectItem>
+            <SelectItem value="all">همه وضعیت‌ها</SelectItem>
+            <SelectItem value="Pending">در انتظار تحلیل</SelectItem>
+            <SelectItem value="Processing">در حال پردازش</SelectItem>
+            <SelectItem value="Completed">تحلیل شده</SelectItem>
+            <SelectItem value="Error">دارای خطا</SelectItem>
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
           <SelectTrigger className="w-36">
-            <SelectValue placeholder="Priority" />
+            <SelectValue placeholder="اولویت" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All priorities</SelectItem>
-            <SelectItem value="Low">Low</SelectItem>
-            <SelectItem value="Medium">Medium</SelectItem>
-            <SelectItem value="High">High</SelectItem>
-            <SelectItem value="Critical">Critical</SelectItem>
+            <SelectItem value="all">همه اولویت‌ها</SelectItem>
+            <SelectItem value="Low">کم</SelectItem>
+            <SelectItem value="Medium">متوسط</SelectItem>
+            <SelectItem value="High">زیاد</SelectItem>
+            <SelectItem value="Critical">بحرانی</SelectItem>
           </SelectContent>
         </Select>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Category" />
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="دسته‌بندی" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">همه دسته‌بندی‌ها</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c} value={c}>
-                {c}
+                {translateCategory(c)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -172,14 +227,14 @@ export function TableView({
         ) : (
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <SortableTh label="Status" k="AI Analysis Status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Title" k="Title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Category" k="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <th className="px-4 py-3 font-medium">Topic</th>
-                <SortableTh label="Insight" k="Insight Type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Priority" k="Priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-                <SortableTh label="Conf." k="Confidence Score" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+              <tr className="border-b border-border text-right text-xs uppercase tracking-wide text-muted-foreground">
+                <SortableTh label="وضعیت" k="AI Analysis Status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="عنوان / متن خام" k="Title" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="دسته‌بندی" k="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <th className="px-4 py-3 font-medium text-right">موضوع</th>
+                <SortableTh label="نوع تحلیل" k="Insight Type" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="اولویت" k="Priority" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortableTh label="درصد اطمینان" k="Confidence Score" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
@@ -194,14 +249,14 @@ export function TableView({
                     key={row.rowNumber}
                     onClick={() => setSelected(row)}
                     className={cn(
-                      "cursor-pointer border-b border-border/60 transition-colors hover:bg-accent/40",
+                      "cursor-pointer border-b border-border/60 transition-colors hover:bg-accent/40 text-right",
                       isActive && "bg-primary/5",
                     )}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       <StatusBadge status={status} processing={isActive && status === "Processing"} />
                     </td>
-                    <td className="max-w-64 px-4 py-3" dir="auto">
+                    <td className="max-w-64 px-4 py-3 text-right" dir="auto">
                       <div className="flex flex-col gap-1">
                         <span className="line-clamp-2 font-medium text-foreground">
                           {row.values["Title"] || (
@@ -226,44 +281,44 @@ export function TableView({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3" dir="auto">
+                    <td className="px-4 py-3 text-right" dir="auto">
                       {row.values["Category"] ? (
-                        <span className="text-foreground">{row.values["Category"]}</span>
+                        <span className="text-foreground">{translateCategory(row.values["Category"])}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="max-w-40 px-4 py-3 text-muted-foreground" dir="auto">
+                    <td className="max-w-40 px-4 py-3 text-muted-foreground text-right" dir="auto">
                       <span className="line-clamp-1">{row.values["Topic"] || "—"}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       {row.values["Insight Type"] ? (
                         <Badge
                           variant="outline"
                           className={cn("font-normal", INSIGHT_STYLES[row.values["Insight Type"]])}
                         >
-                          {row.values["Insight Type"]}
+                          {INSIGHT_TRANSLATIONS[row.values["Insight Type"]] || row.values["Insight Type"]}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       {row.values["Priority"] ? (
                         <Badge
                           variant="outline"
                           className={cn("font-normal", PRIORITY_STYLES[row.values["Priority"]])}
                         >
-                          {row.values["Priority"]}
+                          {PRIORITY_TRANSLATIONS[row.values["Priority"]] || row.values["Priority"]}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-right">
                       {conf > 0 ? <ConfidenceBar value={conf} /> : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-left">
                       {status === "Error" && (
                         <Button
                           variant="ghost"
@@ -276,7 +331,7 @@ export function TableView({
                           className="gap-1.5 text-muted-foreground"
                         >
                           <RotateCw className="size-3.5" />
-                          Retry
+                          تلاش مجدد
                         </Button>
                       )}
                     </td>
@@ -288,8 +343,8 @@ export function TableView({
         )}
       </div>
 
-      <div className="border-t border-border bg-card/40 px-4 py-2 text-xs text-muted-foreground sm:px-6">
-        Showing {filtered.length} of {rows.length} rows
+      <div className="border-t border-border bg-card/40 px-4 py-2 text-xs text-muted-foreground sm:px-6 text-right">
+        نمایش {filtered.length} سطر از مجموع {rows.length} سطر
       </div>
 
       <RowDetailDialog row={selected} onClose={() => setSelected(null)} />
@@ -340,11 +395,11 @@ function StatusBadge({ status, processing }: { status: string; processing: boole
     return (
       <Badge variant="outline" className={cn("gap-1 font-normal", STATUS_STYLES["Processing"])}>
         <Loader2 className="size-3 animate-spin" />
-        Processing
+        در حال پردازش
       </Badge>
     )
   }
-  const label = status || "Pending"
+  const label = STATUS_TRANSLATIONS[status] || STATUS_TRANSLATIONS[""]
   return (
     <Badge variant="outline" className={cn("font-normal", STATUS_STYLES[status] ?? STATUS_STYLES[""])}>
       {label}
@@ -358,7 +413,7 @@ function ConfidenceBar({ value }: { value: number }) {
       <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
       </div>
-      <span className="text-xs tabular-nums text-muted-foreground">{value}</span>
+      <span className="text-xs tabular-nums text-muted-foreground">{value}٪</span>
     </div>
   )
 }
@@ -379,17 +434,17 @@ function EmptyState({ hasRows }: { hasRows: boolean }) {
       <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
         <Inbox className="size-6 text-muted-foreground" />
       </div>
-      <h3 className="text-sm font-medium">{hasRows ? "No matching rows" : "No data yet"}</h3>
+      <h3 className="text-sm font-medium">{hasRows ? "سطری یافت نشد" : "هنوز داده‌ای وجود ندارد"}</h3>
       <p className="mt-1 max-w-xs text-sm text-muted-foreground">
         {hasRows
-          ? "Try adjusting your search or filters."
-          : "Add rows with content to your Google Sheet, then run AI analysis."}
+          ? "جستجو یا فیلترهای خود را تغییر دهید."
+          : "متن خام را به گوگل شیت اضافه کنید، سپس دکمه تحلیل هوشمند را بزنید."}
       </p>
     </div>
   )
 }
 
 function truncate(text: string, max: number) {
-  if (!text) return "Untitled"
+  if (!text) return "بدون عنوان"
   return text.length > max ? `${text.slice(0, max)}…` : text
 }

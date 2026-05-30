@@ -1,13 +1,13 @@
 import { generateObject } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
-import { BUSINESS_STAGES, INSIGHT_TYPES, PRIORITIES, STRATEGIC_IMPORTANCE } from "./types"
+import { BUSINESS_STAGES, INSIGHT_TYPES, PRIORITIES, STRATEGIC_IMPORTANCE, VALID_CATEGORIES } from "./types"
 
 const analysisSchema = z.object({
   normalizedContent: z
     .string()
     .describe("The raw content cleaned of corrupted symbols, extra spaces, and formatting artifacts. Fix Persian/Arabic character issues. Keep the original meaning and language."),
-  category: z.string().describe("The single primary business category."),
+  category: z.enum(VALID_CATEGORIES).describe("The single primary business category."),
   secondaryCategories: z.array(z.string()).describe("Zero or more secondary categories."),
   topic: z.string().describe("A concise business topic (2-5 words)."),
   title: z.string().describe("A descriptive title, maximum 10 words."),
