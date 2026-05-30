@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+import { cn, getRowMetadata } from "@/lib/utils"
 import { AI_FIELDS, RAW_CONTENT, STATUS, ERROR_DETAILS, type SheetRow } from "@/lib/types"
 import { PRIORITY_STYLES, STATUS_STYLES, INSIGHT_STYLES } from "@/lib/field-meta"
 
@@ -20,6 +20,7 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
   if (!row) return null
   const v = row.values
   const status = (v[STATUS] ?? "").trim()
+  const { sender, date } = getRowMetadata(v)
 
   return (
     <Dialog open={!!row} onOpenChange={(open) => !open && onClose()}>
@@ -45,6 +46,27 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
             {v["Title"] || "Untitled note"}
           </DialogTitle>
           {v["Topic"] && <p className="text-sm text-muted-foreground" dir="auto">{v["Topic"]}</p>}
+          {(sender || date) && (
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground/80 font-sans" dir="auto">
+              {sender && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">فرستنده:</span>
+                  <span className="bg-secondary px-2 py-0.5 rounded text-xs font-semibold text-secondary-foreground border border-border/40">
+                    {sender}
+                  </span>
+                </div>
+              )}
+              {sender && date && <span className="opacity-40">•</span>}
+              {date && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">تاریخ:</span>
+                  <span className="font-mono text-xs text-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/20">
+                    {date}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </DialogHeader>
 
         <ScrollArea className="max-h-[65vh]">

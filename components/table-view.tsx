@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import { cn, getRowMetadata } from "@/lib/utils"
 import { RAW_CONTENT, STATUS, type SheetRow } from "@/lib/types"
 import { PRIORITY_STYLES, STATUS_STYLES, INSIGHT_STYLES } from "@/lib/field-meta"
 import { RowDetailDialog } from "@/components/row-detail-dialog"
@@ -188,6 +188,7 @@ export function TableView({
                 const status = (row.values[STATUS] ?? "").trim()
                 const isActive = activeRow === row.rowNumber
                 const conf = Number(row.values["Confidence Score"]) || 0
+                const { sender, date } = getRowMetadata(row.values)
                 return (
                   <tr
                     key={row.rowNumber}
@@ -201,13 +202,29 @@ export function TableView({
                       <StatusBadge status={status} processing={isActive && status === "Processing"} />
                     </td>
                     <td className="max-w-64 px-4 py-3" dir="auto">
-                      <span className="line-clamp-2 font-medium text-foreground">
-                        {row.values["Title"] || (
-                          <span className="text-muted-foreground">
-                            {truncate(row.values[RAW_CONTENT], 60)}
-                          </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="line-clamp-2 font-medium text-foreground">
+                          {row.values["Title"] || (
+                            <span className="text-muted-foreground">
+                              {truncate(row.values[RAW_CONTENT], 60)}
+                            </span>
+                          )}
+                        </span>
+                        {(sender || date) && (
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/85 font-sans mt-0.5" dir="auto">
+                            {sender && (
+                              <span className="flex items-center gap-1 bg-secondary px-1.5 py-0.5 rounded text-[9px] font-semibold text-secondary-foreground border border-border/40">
+                                {sender}
+                              </span>
+                            )}
+                            {date && (
+                              <span className="font-mono text-[9px] opacity-75">
+                                {date}
+                              </span>
+                            )}
+                          </div>
                         )}
-                      </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3" dir="auto">
                       {row.values["Category"] ? (
