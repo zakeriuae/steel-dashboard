@@ -9,7 +9,7 @@ export function getRowMetadata(values: Record<string, string>): { sender: string
   let sender = "";
   let date = "";
 
-  const senderKeys = ["sender", "from", "name", "user", "username", "فرستنده", "نام", "نویسنده", "owner", "creator"];
+  const senderKeys = ["sender", "from", "name", "user", "username", "فرستنده", "نام", "نویسنده", "owner", "creator", "created", "created by", "by"];
   const dateKeys = ["timestamp", "date", "time", "datetime", "تاریخ", "زمان", "ثبت"];
 
   for (const [key, val] of Object.entries(values ?? {})) {

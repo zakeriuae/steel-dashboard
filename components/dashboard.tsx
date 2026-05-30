@@ -209,7 +209,7 @@ export function Dashboard() {
   const retryRow = useCallback((row: SheetRow) => runAnalysis([row.rowNumber]), [runAnalysis])
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background" dir="rtl">
       <Header
         running={running}
         pendingCount={pendingCount}
