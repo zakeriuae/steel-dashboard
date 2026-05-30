@@ -1,9 +1,3 @@
-const dotenv = require('dotenv');
-const path = require('path');
-// Load env files
-dotenv.config({ path: path.resolve(__dirname, '.env') });
-dotenv.config({ path: path.resolve(__dirname, '.env.local') });
-
 const { google } = require('googleapis');
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
