@@ -200,7 +200,7 @@ export function TableView({
                     <td className="px-4 py-3">
                       <StatusBadge status={status} processing={isActive && status === "Processing"} />
                     </td>
-                    <td className="max-w-64 px-4 py-3">
+                    <td className="max-w-64 px-4 py-3" dir="auto">
                       <span className="line-clamp-2 font-medium text-foreground">
                         {row.values["Title"] || (
                           <span className="text-muted-foreground">
@@ -209,14 +209,14 @@ export function TableView({
                         )}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" dir="auto">
                       {row.values["Category"] ? (
                         <span className="text-foreground">{row.values["Category"]}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="max-w-40 px-4 py-3 text-muted-foreground">
+                    <td className="max-w-40 px-4 py-3 text-muted-foreground" dir="auto">
                       <span className="line-clamp-1">{row.values["Topic"] || "—"}</span>
                     </td>
                     <td className="px-4 py-3">

@@ -41,35 +41,35 @@ export function RowDetailDialog({ row, onClose }: { row: SheetRow | null; onClos
             )}
             <span className="ml-auto text-xs text-muted-foreground">Row {row.rowNumber}</span>
           </div>
-          <DialogTitle className="text-pretty text-lg leading-snug">
+          <DialogTitle className="text-pretty text-lg leading-snug" dir="auto">
             {v["Title"] || "Untitled note"}
           </DialogTitle>
-          {v["Topic"] && <p className="text-sm text-muted-foreground">{v["Topic"]}</p>}
+          {v["Topic"] && <p className="text-sm text-muted-foreground" dir="auto">{v["Topic"]}</p>}
         </DialogHeader>
 
         <ScrollArea className="max-h-[65vh]">
           <div className="flex flex-col gap-5 p-6">
             {status === "Error" && v[ERROR_DETAILS] && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" dir="auto">
                 {v[ERROR_DETAILS]}
               </div>
             )}
 
             {v["Summary"] && (
               <Section title="Summary">
-                <p className="text-pretty text-sm leading-relaxed text-foreground">{v["Summary"]}</p>
+                <p className="text-pretty text-sm leading-relaxed text-foreground" dir="auto">{v["Summary"]}</p>
               </Section>
             )}
 
             <Section title="Raw Content">
-              <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-muted-foreground">
+              <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-muted-foreground" dir="auto">
                 {v[RAW_CONTENT]}
               </p>
             </Section>
 
             {v["Normalized Content"] && v["Normalized Content"] !== v[RAW_CONTENT] && (
               <Section title="Normalized Content">
-                <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-foreground">
+                <p className="whitespace-pre-wrap text-pretty text-sm leading-relaxed text-foreground" dir="auto">
                   {v["Normalized Content"]}
                 </p>
               </Section>
@@ -119,7 +119,7 @@ function Field({ label, value, isList }: { label: string; value: string; isList:
         {label}
       </h4>
       {isList ? (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" dir="auto">
           {value
             .split(",")
             .map((s) => s.trim())
@@ -131,7 +131,7 @@ function Field({ label, value, isList }: { label: string; value: string; isList:
             ))}
         </div>
       ) : (
-        <p className="text-pretty text-sm text-foreground">{value}</p>
+        <p className="text-pretty text-sm text-foreground" dir="auto">{value}</p>
       )}
     </div>
   )
